@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --background-secondary: 0 0% 6.7%;
+    --background-card: 0 0% 10%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 45 65% 52%;
+    --primary-foreground: 0 0% 4%;
+    --primary-light: 43 85% 60%;
+    --primary-dark: 44 88% 38%;
+
+    --secondary: 0 0% 6.7%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 63%;
+
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 4%;
+
+    --silver: 0 0% 75%;
+    --silver-light: 0 0% 91%;
+
+    --border: 45 65% 52% / 0.2;
+    --input: 0 0% 15%;
+    --ring: 45 65% 52%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 6.7%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 45 65% 52%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 45 65% 52% / 0.2;
+    --sidebar-ring: 45 65% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .gold-gradient {
+    background: linear-gradient(135deg, hsl(45 65% 52%), hsl(43 85% 60%));
+  }
+
+  .gold-gradient-text {
+    background: linear-gradient(135deg, hsl(45 65% 52%), hsl(43 85% 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass-card {
+    background: hsl(0 0% 100% / 0.05);
+    backdrop-filter: blur(8px);
+    border: 1px solid hsl(45 65% 52% / 0.2);
+  }
+
+  .gold-border-glow {
+    box-shadow: 0 0 20px hsl(45 65% 52% / 0.15), 0 0 40px hsl(45 65% 52% / 0.05);
+  }
+
+  .gold-shadow {
+    box-shadow: 0 4px 20px hsl(45 65% 52% / 0.2);
+  }
+}
+
+/* ─── ScrollXUI-inspired effects ─────────────────────────────────────────── */
+
+/* Shimmer sweep en botones primarios */
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  animation: shimmer-sweep 3.5s ease-in-out infinite;
+}
+@keyframes shimmer-sweep {
+  0%   { left: -75%; }
+  60%  { left: 125%; }
+  100% { left: 125%; }
+}
+
+/* Animated glowing border para cards activos */
+.glow-card-gold {
+  position: relative;
+  background: hsl(0 0% 100% / 0.05);
+  backdrop-filter: blur(8px);
+}
+.glow-card-gold::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    hsl(45 65% 52% / 0.8),
+    hsl(43 85% 60% / 0.3),
+    hsl(45 65% 52% / 0.8)
+  );
+  background-size: 200% 200%;
+  animation: border-rotate 4s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+@keyframes border-rotate {
+  0%   { background-position: 0% 50%;   }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%;   }
+}
+
+/* Floating animation para el logo/badge en resultados */
+.float-anim {
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+/* Particle burst para resultado Elite */
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: particle-burst var(--duration, 1.2s) ease-out forwards;
+}
+@keyframes particle-burst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx, 0), var(--ty, -80px)) scale(0); opacity: 0; }
+}
+
+/* Spotlight hover para cards del admin */
+.spotlight-card {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.spotlight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px hsl(45 65% 52% / 0.15), 0 2px 8px hsl(0 0% 0% / 0.4);
+}
+
+/* Stagger fade para filas de tabla */
+@keyframes row-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(45 65% 52% / 0.4); }
+  50% { box-shadow: 0 0 0 12px hsl(45 65% 52% / 0); }
+}
