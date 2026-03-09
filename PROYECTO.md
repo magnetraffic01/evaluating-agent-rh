@@ -16,6 +16,8 @@
 | Supabase Project ID | `oeqqhsrwhxmwoxtluflf` |
 | Supabase URL | `https://oeqqhsrwhxmwoxtluflf.supabase.co` |
 | Deploy target | Netlify |
+| URL producción | https://evaluating-agent-rh.netlify.app |
+| Repo GitHub | https://github.com/Mario24874/evaluating-agent-hr |
 | Fecha inicio | 2026-03-09 |
 
 ---
@@ -381,7 +383,7 @@ App → Webhook resultado → GHL
 
 **Link que Alex envía al candidato:**
 ```
-https://[APP_URL]/evaluate?name=Juan%20Pérez&phone=5215512345678
+https://evaluating-agent-rh.netlify.app/evaluate?name=Juan%20Pérez&phone=5215512345678
 ```
 
 **Qué cambia en n8n:**
@@ -512,6 +514,8 @@ npm install [paquete]
 | Supabase SQL Editor | https://supabase.com/dashboard/project/oeqqhsrwhxmwoxtluflf/sql/new |
 | Supabase Storage | https://supabase.com/dashboard/project/oeqqhsrwhxmwoxtluflf/storage/buckets |
 | Netlify Dashboard | https://app.netlify.com |
+| App en producción | https://evaluating-agent-rh.netlify.app |
+| App — evaluación test | https://evaluating-agent-rh.netlify.app/evaluate?name=Juan&phone=5215512345678 |
 | GHL Calendar Elite | https://crm.yainsurance.us/widget/bookings/closer-entrevistas |
 | GHL Calendar Estándar | https://link.magnetraffic.com/widget/bookings/entrevista-para-closer |
 

@@ -1,4 +1,5 @@
 # Environment variables (nunca commitear — contienen API keys)
+.env
 .env.production
 .env.development
 
