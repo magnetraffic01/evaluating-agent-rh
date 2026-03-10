@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Link2, FileText, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { uploadCV, validateFile } from '@/lib/storage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Props {
   sessionId: string;
@@ -12,6 +13,7 @@ interface Props {
 type Tab = 'url' | 'file';
 
 export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>('url');
 
   // URL tab
@@ -28,8 +30,6 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
   const [attempts, setAttempts] = useState(0);
   const [formError, setFormError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
-
-  // ── Manejo de archivo ────────────────────────────────────────────────────────
 
   const handleFile = (f: File) => {
     const err = validateFile(f);
@@ -70,8 +70,6 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
-
   const handleSubmit = () => {
     setFormError('');
 
@@ -80,46 +78,40 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
       if (!trimmed) {
         if (attempts >= 1) { onDisqualify('no_envio_cv'); return; }
         setAttempts(a => a + 1);
-        setFormError(attempts === 0
-          ? 'Por favor ingresa tu URL de LinkedIn o CV. Este es tu último intento.'
-          : 'Necesitamos tu CV para continuar.');
+        setFormError(t('cv_error_url'));
         return;
       }
       onNext({ linkedinUrl: trimmed, cvUrl: trimmed });
       return;
     }
 
-    // Tab archivo
     if (!uploaded) {
       if (!file) {
         if (attempts >= 1) { onDisqualify('no_envio_cv'); return; }
         setAttempts(a => a + 1);
-        setFormError('Selecciona y sube un archivo. Este es tu último intento.');
+        setFormError(t('cv_error_file'));
         return;
       }
-      setFormError('Haz clic en "Subir archivo" primero.');
+      setFormError(t('cv_error_upload_first'));
       return;
     }
 
     onNext({ cvUrl: uploaded.signedUrl, linkedinUrl: '' });
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
-
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold text-foreground mb-2">Tu expediente</h2>
-      <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-        Último paso: para enviarte el enlace de entrevista necesitamos tu perfil.
-        Puedes pegar tu URL de LinkedIn o subir tu CV directamente.
+      <h2 className="text-xl font-bold text-foreground mb-2">{t('cv_title')}</h2>
+      <p className="text-muted-foreground text-sm leading-relaxed mb-6 whitespace-pre-line">
+        {t('cv_description')}
       </p>
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-muted/40 rounded-xl mb-6">
         {([
-          { id: 'url',  label: 'LinkedIn / URL', icon: Link2   },
-          { id: 'file', label: 'Subir archivo',  icon: Upload  },
-        ] as const).map(({ id, label, icon: Icon }) => (
+          { id: 'url' as Tab, labelKey: 'cv_tab_url', icon: Link2 },
+          { id: 'file' as Tab, labelKey: 'cv_tab_file', icon: Upload },
+        ]).map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             onClick={() => { setTab(id); setFormError(''); }}
@@ -130,14 +122,12 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
             }`}
           >
             <Icon size={15} />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
 
       <AnimatePresence mode="wait">
-
-        {/* ── Tab URL ─────────────────────────────────────────────────────────── */}
         {tab === 'url' && (
           <motion.div
             key="url"
@@ -147,19 +137,18 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
             transition={{ duration: 0.2 }}
           >
             <label className="block text-sm font-medium text-foreground mb-2">
-              URL de LinkedIn o CV online
+              {t('cv_url_label')}
             </label>
             <input
               type="url"
               value={url}
               onChange={(e) => { setUrl(e.target.value); setFormError(''); }}
-              placeholder="https://linkedin.com/in/tu-perfil"
+              placeholder={t('cv_url_placeholder')}
               className="w-full bg-input border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </motion.div>
         )}
 
-        {/* ── Tab Archivo ─────────────────────────────────────────────────────── */}
         {tab === 'file' && (
           <motion.div
             key="file"
@@ -169,7 +158,6 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
             transition={{ duration: 0.2 }}
             className="space-y-4"
           >
-            {/* Zona de drop */}
             {!uploaded && (
               <div
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -191,7 +179,6 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
                   className="hidden"
                   onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
                 />
-
                 {file ? (
                   <div className="flex items-center justify-center gap-3">
                     <FileText size={22} className="text-primary shrink-0" />
@@ -212,21 +199,18 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
                   <>
                     <Upload size={28} className="mx-auto mb-3 text-muted-foreground/60" />
                     <p className="text-foreground text-sm font-medium mb-1">
-                      Arrastra tu archivo aquí o haz clic para seleccionar
+                      {t('cv_drop_title')}
                     </p>
-                    <p className="text-muted-foreground text-xs">
-                      PDF, DOC, DOCX, JPG, PNG, WEBP · Máx. 5 MB
-                    </p>
+                    <p className="text-muted-foreground text-xs">{t('cv_drop_types')}</p>
                   </>
                 )}
               </div>
             )}
 
-            {/* Progreso de upload */}
             {uploading && (
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Subiendo archivo...</span>
+                  <span>{t('cv_uploading')}</span>
                   <span>{uploadPct}%</span>
                 </div>
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -240,7 +224,6 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
               </div>
             )}
 
-            {/* Estado: subido con éxito */}
             {uploaded && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.97 }}
@@ -249,7 +232,7 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
               >
                 <CheckCircle size={18} className="text-success shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-success text-sm font-medium">Archivo subido correctamente</p>
+                  <p className="text-success text-sm font-medium">{t('cv_uploaded_ok')}</p>
                   <p className="text-muted-foreground text-xs truncate">{file?.name}</p>
                 </div>
                 <button
@@ -261,7 +244,6 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
               </motion.div>
             )}
 
-            {/* Error de archivo */}
             {fileError && (
               <motion.p
                 initial={{ opacity: 0, y: -4 }}
@@ -273,20 +255,18 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
               </motion.p>
             )}
 
-            {/* Botón de subida */}
             {file && !uploaded && !uploading && (
               <button
                 onClick={handleUpload}
                 className="shimmer-btn w-full border border-primary/40 text-primary font-semibold py-2.5 rounded-full hover:bg-primary/10 transition-all"
               >
-                Subir archivo →
+                {t('cv_upload_btn')}
               </button>
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Error general */}
       {formError && (
         <motion.p
           initial={{ opacity: 0, y: -4 }}
@@ -298,7 +278,6 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
         </motion.p>
       )}
 
-      {/* Botón principal */}
       <button
         onClick={handleSubmit}
         disabled={uploading}
@@ -307,15 +286,15 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
         {uploading ? (
           <span className="flex items-center justify-center gap-2">
             <span className="w-4 h-4 border-2 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
-            Subiendo...
+            {t('cv_saving')}
           </span>
         ) : (
-          'Finalizar Evaluación →'
+          t('cv_finish')
         )}
       </button>
 
       <p className="text-center text-xs text-muted-foreground/50 mt-3">
-        Tu información es confidencial y solo la verá el equipo de Magnetraffic
+        {t('cv_confidential')}
       </p>
     </div>
   );

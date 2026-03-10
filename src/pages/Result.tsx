@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import MagnetLogo from '@/components/MagnetLogo';
-import { EvaluationState, DISQUALIFY_REASONS } from '@/types/evaluation';
+import { EvaluationState } from '@/types/evaluation';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const CALENDAR_ELITE = import.meta.env.VITE_CALENDAR_ELITE || 'https://crm.yainsurance.us/widget/bookings/closer-entrevistas';
 const CALENDAR_STD   = import.meta.env.VITE_CALENDAR_STD   || 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
@@ -57,6 +58,7 @@ function RevealText({ children, delay = 0, className = '' }: { children: React.R
 // ─── Result layouts ───────────────────────────────────────────────────────────
 
 function EliteResult({ name }: { name: string }) {
+  const { t } = useLanguage();
   return (
     <div className="text-center space-y-6">
       <RevealText delay={0.1}>
@@ -71,31 +73,29 @@ function EliteResult({ name }: { name: string }) {
           </motion.div>
           <div className="shimmer-btn inline-block px-6 py-2 rounded-full gold-gradient">
             <span className="text-primary-foreground font-bold text-base tracking-widest uppercase">
-              Perfil Élite
+              {t('result_elite_badge')}
             </span>
           </div>
         </div>
       </RevealText>
 
       <RevealText delay={0.3} className="text-muted-foreground text-sm">
-        Evaluación completada · Resultado confidencial
+        {t('result_elite_subtitle')}
       </RevealText>
 
       <RevealText delay={0.45}>
-        <p className="text-foreground text-lg leading-relaxed">
-          <strong>{name}</strong>, tienes uno de los perfiles más sólidos de esta convocatoria.
-          <br /><br />
-          El equipo de liderazgo quiere conocerte directamente.
+        <p className="text-foreground text-lg leading-relaxed whitespace-pre-line">
+          <strong>{name}</strong>
+          {t('result_elite_msg', { name: '' }).replace('{name}', '')}
         </p>
       </RevealText>
 
       <RevealText delay={0.6}>
         <div className="relative glow-card-gold rounded-xl p-6">
           <ParticleBurst />
-          <h3 className="text-foreground font-bold text-lg mb-2">Siguiente paso: Entrevista Prioritaria</h3>
-          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-            Sesión de 20 minutos con el Director del Proyecto.<br />
-            Selecciona el horario que mejor te funcione:
+          <h3 className="text-foreground font-bold text-lg mb-2">{t('result_elite_next_title')}</h3>
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed whitespace-pre-line">
+            {t('result_elite_next_desc')}
           </p>
           <a
             href={CALENDAR_ELITE}
@@ -103,7 +103,7 @@ function EliteResult({ name }: { name: string }) {
             rel="noopener noreferrer"
             className="shimmer-btn inline-block gold-gradient text-primary-foreground font-bold py-4 px-8 rounded-full text-base transition-all hover:opacity-90 active:scale-[0.98] animate-pulse-gold"
           >
-            📅 Agendar Mi Entrevista →
+            {t('result_elite_cta')}
           </a>
         </div>
       </RevealText>
@@ -112,6 +112,7 @@ function EliteResult({ name }: { name: string }) {
 }
 
 function CalificadoResult({ name }: { name: string }) {
+  const { t } = useLanguage();
   return (
     <div className="text-center space-y-6">
       <RevealText delay={0.1}>
@@ -126,25 +127,24 @@ function CalificadoResult({ name }: { name: string }) {
           </motion.div>
           <div className="inline-block px-6 py-2 rounded-full bg-success/15 border border-success/40">
             <span className="text-success font-bold text-base tracking-widest uppercase">
-              Perfil Calificado
+              {t('result_calificado_badge')}
             </span>
           </div>
         </div>
       </RevealText>
 
       <RevealText delay={0.35}>
-        <p className="text-foreground text-lg leading-relaxed">
-          <strong>{name}</strong>, tu perfil encaja con lo que buscamos.
-          <br /><br />
-          El siguiente paso es una llamada de 20 minutos con nuestro equipo.
+        <p className="text-foreground text-lg leading-relaxed whitespace-pre-line">
+          <strong>{name}</strong>
+          {t('result_calificado_msg', { name: '' }).replace('{name}', '')}
         </p>
       </RevealText>
 
       <RevealText delay={0.5}>
         <div className="glass-card rounded-xl p-6">
-          <h3 className="text-foreground font-bold text-lg mb-2">Agenda tu entrevista</h3>
+          <h3 className="text-foreground font-bold text-lg mb-2">{t('result_calificado_card_title')}</h3>
           <p className="text-muted-foreground text-sm mb-6">
-            Escoge el horario que más te acomode para la llamada.
+            {t('result_calificado_card_desc')}
           </p>
           <a
             href={CALENDAR_STD}
@@ -152,7 +152,7 @@ function CalificadoResult({ name }: { name: string }) {
             rel="noopener noreferrer"
             className="shimmer-btn inline-block bg-success text-white font-bold py-4 px-8 rounded-full text-base transition-all hover:opacity-90 active:scale-[0.98]"
           >
-            📅 Seleccionar Horario →
+            {t('result_calificado_cta')}
           </a>
         </div>
       </RevealText>
@@ -161,6 +161,7 @@ function CalificadoResult({ name }: { name: string }) {
 }
 
 function PotencialResult({ name, phone }: { name: string; phone: string }) {
+  const { t } = useLanguage();
   return (
     <div className="text-center space-y-6">
       <RevealText delay={0.1}>
@@ -168,27 +169,27 @@ function PotencialResult({ name, phone }: { name: string; phone: string }) {
           <div className="text-4xl">⏳</div>
           <div className="inline-block px-6 py-2 rounded-full bg-muted border border-border">
             <span className="text-muted-foreground font-bold text-base tracking-widest uppercase">
-              En Revisión
+              {t('result_potencial_badge')}
             </span>
           </div>
         </div>
       </RevealText>
 
       <RevealText delay={0.3}>
-        <p className="text-foreground text-lg font-medium">{name}, evaluación completada.</p>
+        <p className="text-foreground text-lg font-medium">
+          {t('result_potencial_completed', { name })}
+        </p>
       </RevealText>
 
       <RevealText delay={0.45}>
-        <p className="text-muted-foreground leading-relaxed">
-          Tienes bases sólidas, pero hay aspectos que el equipo de Dirección necesita revisar con más detalle.
-          <br /><br />
-          Te contactaremos en las próximas <strong className="text-foreground">48 horas hábiles</strong>.
+        <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+          {t('result_potencial_desc', { hours: '48' })}
         </p>
       </RevealText>
 
       <RevealText delay={0.6}>
         <div className="glass-card rounded-xl p-4 text-sm text-muted-foreground">
-          Teléfono registrado: <span className="text-foreground font-mono">{phone}</span>
+          {t('result_potencial_phone')} <span className="text-foreground font-mono">{phone}</span>
         </div>
       </RevealText>
     </div>
@@ -196,26 +197,29 @@ function PotencialResult({ name, phone }: { name: string; phone: string }) {
 }
 
 function DescartadoResult({ name, reason }: { name: string; reason: string }) {
-  const reasonText = DISQUALIFY_REASONS[reason] || 'un match exacto con este proyecto';
+  const { t } = useLanguage();
+  const reasonKey = `disq_${reason}` as string;
+  const reasonText = t(reasonKey) !== reasonKey ? t(reasonKey) : t('disq_default');
+
   return (
     <div className="text-center space-y-6">
       <RevealText delay={0.1}>
         <div className="inline-block px-6 py-2 rounded-full bg-muted/50 border border-border">
-          <span className="text-muted-foreground font-medium text-base">Evaluación Finalizada</span>
+          <span className="text-muted-foreground font-medium text-base">
+            {t('result_descartado_badge')}
+          </span>
         </div>
       </RevealText>
 
       <RevealText delay={0.3}>
-        <p className="text-foreground text-lg font-medium">{name}, completamos tu evaluación.</p>
+        <p className="text-foreground text-lg font-medium">
+          {t('result_descartado_msg', { name })}
+        </p>
       </RevealText>
 
       <RevealText delay={0.45}>
-        <p className="text-muted-foreground leading-relaxed">
-          En este momento el perfil que buscamos requiere <strong className="text-foreground">{reasonText}</strong>.
-          <br /><br />
-          Esto no significa que no tengas potencial — significa que el match exacto con este proyecto no está dado en este momento.
-          <br /><br />
-          Te deseamos mucho éxito.
+        <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+          {t('result_descartado_desc', { reason: reasonText })}
         </p>
       </RevealText>
     </div>
@@ -225,6 +229,7 @@ function DescartadoResult({ name, reason }: { name: string; reason: string }) {
 // ─── Página Result ────────────────────────────────────────────────────────────
 
 export default function Result() {
+  const { t } = useLanguage();
   const { sessionId } = useParams<{ sessionId: string }>();
   const [state, setState] = useState<EvaluationState | null>(null);
 
@@ -239,7 +244,7 @@ export default function Result() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="glass-card rounded-xl p-8 text-center">
           <MagnetLogo />
-          <p className="text-muted-foreground mt-4">Sesión no encontrada.</p>
+          <p className="text-muted-foreground mt-4">{t('session_not_found')}</p>
         </div>
       </div>
     );
@@ -286,7 +291,7 @@ export default function Result() {
       </div>
 
       <footer className="py-4 text-center text-xs text-muted-foreground/40 relative z-10">
-        {state.status === 'descartado' ? 'Gracias por tu tiempo' : 'Proceso confidencial'} · Magnetraffic © 2025
+        {state.status === 'descartado' ? t('footer_thanks') : t('footer_confidential')}
       </footer>
     </div>
   );

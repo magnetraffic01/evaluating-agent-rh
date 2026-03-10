@@ -1,4 +1,5 @@
 import WavingHand from '@/components/WavingHand';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Props {
   name: string;
@@ -6,30 +7,32 @@ interface Props {
   onDisqualify: (reason: string) => void;
 }
 
-export default function ConsentStep({ name, onNext, onDisqualify }: Props) {
+export default function ConsentStep({ onNext, onDisqualify }: Props) {
+  const { t } = useLanguage();
+
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold text-foreground mb-6">Antes de empezar</h2>
+      <h2 className="text-xl font-bold text-foreground mb-6">{t('consent_title')}</h2>
       <div className="space-y-4 text-muted-foreground leading-relaxed mb-8">
         <p className="flex items-center gap-2">
           <WavingHand size={22} />
-          Hola, soy el sistema de evaluación de Magnetraffic
+          {t('consent_greeting')}
         </p>
-        <p>Veo que te interesó la oportunidad de closer remoto para el mercado hispano en EE.UU.</p>
-        <p>Tenemos una evaluación estructurada antes de la entrevista. ¿Deseas continuar?</p>
+        <p>{t('consent_interest')}</p>
+        <p>{t('consent_question')}</p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={() => onNext({ consent: true })}
           className="flex-1 gold-gradient text-primary-foreground font-semibold py-3 px-6 rounded-full transition-all hover:opacity-90 active:scale-[0.98]"
         >
-          Sí, quiero continuar
+          {t('consent_yes')}
         </button>
         <button
           onClick={() => onDisqualify('rechazo_inicial')}
           className="flex-1 border border-muted-foreground/30 text-muted-foreground font-medium py-3 px-6 rounded-full transition-all hover:bg-muted"
         >
-          No, gracias
+          {t('consent_no')}
         </button>
       </div>
     </div>

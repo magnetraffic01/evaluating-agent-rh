@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Props {
   name: string;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function BasicInfoStep({ name, onNext, onDisqualify }: Props) {
+  const { t } = useLanguage();
   const [location, setLocation] = useState('');
   const [availability, setAvailability] = useState('');
 
@@ -19,34 +21,38 @@ export default function BasicInfoStep({ name, onNext, onDisqualify }: Props) {
     onNext({ location: location.trim(), availability });
   };
 
+  const availabilityOptions = [
+    { value: 'more_30', label: t('basic_more30') },
+    { value: 'less_30', label: t('basic_less30') },
+  ];
+
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold text-foreground mb-4">Información básica</h2>
-      <p className="text-muted-foreground leading-relaxed mb-6">
-        Perfecto, {name}. Necesito confirmar algunos datos.
-        <br /><br />
-        ¿Desde qué ciudad y país nos escribes, y estás disponible para trabajar full time (más de 30 horas por semana)?
+      <h2 className="text-xl font-bold text-foreground mb-4">{t('basic_title')}</h2>
+      <p className="text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
+        {t('basic_description', { name })}
       </p>
 
       <div className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Ciudad y país de residencia</label>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            {t('basic_location_label')}
+          </label>
           <input
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="Ej: Bogotá, Colombia"
+            placeholder={t('basic_location_placeholder')}
             className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-3">Disponibilidad semanal</label>
+          <label className="block text-sm font-medium text-foreground mb-3">
+            {t('basic_availability_label')}
+          </label>
           <div className="space-y-2">
-            {[
-              { value: 'more_30', label: 'Más de 30 horas semanales ✓' },
-              { value: 'less_30', label: 'Menos de 30 horas semanales' },
-            ].map((opt) => (
+            {availabilityOptions.map((opt) => (
               <label
                 key={opt.value}
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
@@ -63,10 +69,16 @@ export default function BasicInfoStep({ name, onNext, onDisqualify }: Props) {
                   onChange={() => setAvailability(opt.value)}
                   className="sr-only"
                 />
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  availability === opt.value ? 'border-primary' : 'border-muted-foreground/40'
-                }`}>
-                  {availability === opt.value && <div className="w-2 h-2 rounded-full bg-primary" />}
+                <div
+                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    availability === opt.value
+                      ? 'border-primary'
+                      : 'border-muted-foreground/40'
+                  }`}
+                >
+                  {availability === opt.value && (
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                  )}
                 </div>
                 <span className="text-foreground text-sm">{opt.label}</span>
               </label>
@@ -80,7 +92,7 @@ export default function BasicInfoStep({ name, onNext, onDisqualify }: Props) {
         disabled={!location.trim() || !availability}
         className="mt-6 w-full gold-gradient text-primary-foreground font-semibold py-3 px-6 rounded-full transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        Continuar →
+        {t('continue')}
       </button>
     </div>
   );

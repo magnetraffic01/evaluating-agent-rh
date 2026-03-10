@@ -6,6 +6,7 @@ import MagnetLogo from '@/components/MagnetLogo';
 import WavingHand from '@/components/WavingHand';
 import StepRenderer from '@/components/StepRenderer';
 import { EvaluationState, createInitialState } from '@/types/evaluation';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   scoreClosingRole, isClosingRoleDisqualify, scoreVolume,
   scoreIncomePenalty, scoreReactivation, scoreObjection,
@@ -40,6 +41,7 @@ export default function Evaluate() {
   const name = searchParams.get('name') || '';
   const phone = searchParams.get('phone') || '';
 
+  const { t, lang } = useLanguage();
   const [state, setState] = useState<EvaluationState | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -257,9 +259,7 @@ export default function Evaluate() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="glass-card rounded-xl p-8 max-w-md text-center">
           <MagnetLogo size="lg" />
-          <p className="text-destructive mt-6 font-medium">
-            Enlace inválido. Contacta a tu reclutador.
-          </p>
+          <p className="text-destructive mt-6 font-medium">{t('invalid_link')}</p>
         </div>
       </div>
     );
@@ -283,20 +283,20 @@ export default function Evaluate() {
               <MagnetLogo size="lg" />
             </div>
             <p className="text-muted-foreground text-sm tracking-widest uppercase mb-6">
-              Evaluación de Closer Comercial Remoto
+              {t('welcome_subtitle')}
             </p>
             <div className="w-16 h-0.5 gold-gradient mx-auto mb-8" />
 
             <h1 className="text-3xl font-bold text-foreground mb-4 flex items-center justify-center gap-3">
-              Hola, {name}
+              {lang === 'es' ? 'Hola' : 'Hello'}, {name}
               <WavingHand size={34} />
             </h1>
             <p className="text-muted-foreground leading-relaxed mb-8">
-              Esta evaluación toma aproximadamente 15-20 minutos. Responde con honestidad — evaluamos criterio real, no respuestas perfectas. El proceso debe completarse sin interrupciones.
+              {t('welcome_description')}
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 mb-10">
-              {['⏱ 15-20 minutos', '📱 Sin pausas', '🎯 Evaluación única'].map((badge) => (
+              {[t('welcome_badge_time'), t('welcome_badge_nopause'), t('welcome_badge_unique')].map((badge) => (
                 <span key={badge} className="px-4 py-2 rounded-full border border-primary/30 text-sm text-foreground bg-primary/5">
                   {badge}
                 </span>
@@ -307,12 +307,12 @@ export default function Evaluate() {
               onClick={handleStart}
               className="gold-gradient text-primary-foreground font-bold py-4 px-10 rounded-full text-lg transition-all hover:opacity-90 active:scale-[0.98] animate-pulse-gold"
             >
-              Comenzar Evaluación →
+              {t('welcome_start')}
             </button>
           </motion.div>
         </div>
         <footer className="py-4 text-center text-xs text-muted-foreground/50">
-          © 2025 Magnetraffic · Proceso confidencial
+          {t('footer_confidential')}
         </footer>
       </div>
     );
@@ -332,7 +332,7 @@ export default function Evaluate() {
           {showProgress && (
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground">
-                Paso {progressStep} de {TOTAL_VISIBLE_STEPS}
+                {t('step_progress', { step: progressStep, total: TOTAL_VISIBLE_STEPS })}
               </span>
               <div className="w-24 sm:w-32 h-2 bg-muted rounded-full overflow-hidden">
                 <div
@@ -358,7 +358,7 @@ export default function Evaluate() {
       </main>
 
       <footer className="py-4 text-center text-xs text-muted-foreground/50">
-        Proceso confidencial · Magnetraffic © 2025
+        {t('footer_confidential')}
       </footer>
     </div>
   );

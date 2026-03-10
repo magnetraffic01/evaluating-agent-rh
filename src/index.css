@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer base {
+  /* ─── Dark mode (default) ─── */
   :root {
     --background: 0 0% 4%;
     --background-secondary: 0 0% 6.7%;
@@ -57,6 +58,58 @@
   }
 }
 
+  /* ─── Light mode ─── */
+  .light {
+    --background: 0 0% 97%;
+    --background-secondary: 0 0% 93%;
+    --background-card: 0 0% 100%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: 45 70% 38%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 43 85% 48%;
+    --primary-dark: 44 88% 28%;
+
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 8%;
+
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 42%;
+
+    --accent: 0 0% 93%;
+    --accent-foreground: 0 0% 8%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 60% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 44%;
+    --warning-foreground: 0 0% 100%;
+
+    --silver: 0 0% 50%;
+    --silver-light: 0 0% 30%;
+
+    --border: 45 65% 52% / 0.25;
+    --input: 0 0% 93%;
+    --ring: 45 65% 38%;
+
+    --sidebar-background: 0 0% 93%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: 45 70% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 88%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 45 65% 52% / 0.25;
+    --sidebar-ring: 45 70% 38%;
+  }
+
 @layer base {
   * {
     @apply border-border;
@@ -93,6 +146,18 @@
   .gold-shadow {
     box-shadow: 0 4px 20px hsl(45 65% 52% / 0.2);
   }
+}
+
+/* ─── Light mode overrides for glass utilities ────────────────────────────── */
+
+.light .glass-card {
+  background: hsl(0 0% 100% / 0.88);
+  border: 1px solid hsl(45 65% 52% / 0.28);
+  box-shadow: 0 2px 20px hsl(0 0% 0% / 0.06);
+}
+
+.light .glow-card-gold {
+  background: hsl(0 0% 100% / 0.92);
 }
 
 /* ─── ScrollXUI-inspired effects ─────────────────────────────────────────── */
