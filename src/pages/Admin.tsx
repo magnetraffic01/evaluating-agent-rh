@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
 import { useAdmin, AdminEvaluation } from '@/hooks/useAdmin';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabase as supabaseAdmin } from '@/lib/supabase';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 

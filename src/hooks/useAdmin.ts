@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabase as supabaseAdmin } from '@/lib/supabase';
 
 export interface AdminEvaluation {
   id: string;
