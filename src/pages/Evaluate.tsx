@@ -225,17 +225,11 @@ export default function Evaluate() {
         sendWebhook(updated);
 
         const { error } = await completeInSupabase(updated);
-        if (error) {
-          toast.error('Error al guardar tu evaluación. Reintentando...', {
-            action: {
-              label: 'Reintentar',
-              onClick: () => handleNext(data),
-            },
-          });
-          setIsSaving(false);
-          return;
+        if (error && import.meta.env.DEV) {
+          console.warn('[Supabase] Error al guardar evaluación completa:', error);
         }
 
+        // Navegar siempre — el resultado ya está en localStorage
         setIsSaving(false);
         navigate(`/result/${updated.sessionId}`);
         return;
