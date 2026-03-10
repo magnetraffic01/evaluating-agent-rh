@@ -8,13 +8,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Faltan variables de entorno de Supabase');
 }
 
-// Cliente público — para operaciones del candidato (INSERT, UPDATE propio)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const authConfig = {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+};
+
+// Cliente público — para operaciones del candidato (INSERT, UPDATE)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, authConfig);
 
 // Cliente admin — para leer todos los registros desde el dashboard
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+export const supabaseAdmin = createClient(
+  supabaseUrl,
+  supabaseServiceKey || supabaseAnonKey,
+  authConfig,
+);
