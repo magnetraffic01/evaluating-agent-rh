@@ -28,6 +28,7 @@ export interface EvaluationState {
   maritalStatus: string;
   cvUrl: string;
   linkedinUrl: string;
+  assignedTo: string;
 
   // Scoring
   scores: ScoreBreakdown;
@@ -99,6 +100,7 @@ export function createInitialState(name: string, phone: string): EvaluationState
     maritalStatus: '',
     cvUrl: '',
     linkedinUrl: '',
+    assignedTo: '',
     scores: {
       E1_cierre: 0,
       E1_volumen: 0,

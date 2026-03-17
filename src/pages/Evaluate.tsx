@@ -40,6 +40,7 @@ export default function Evaluate() {
   const navigate = useNavigate();
   const name = searchParams.get('name') || '';
   const phone = searchParams.get('phone') || '';
+  const recruiter = searchParams.get('recruiter') || '';
 
   const { t, lang } = useLanguage();
   const [state, setState] = useState<EvaluationState | null>(null);
@@ -85,6 +86,7 @@ export default function Evaluate() {
 
     // Sesión nueva
     const initial = createInitialState(name, phone);
+    if (recruiter) initial.assignedTo = recruiter;
     localStorage.setItem(sessionKey, initial.sessionId);
     saveLocal(initial);
     setState(initial);

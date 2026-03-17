@@ -25,6 +25,22 @@ export interface AdminEvaluation {
   disqualify_reason: string | null;
   current_step: number;
   last_activity: string;
+  answers: Record<string, string> | null;
+  assigned_to: string | null;
+  interview_status: string | null;
+  interview_date: string | null;
+  recruiter_notes: string | null;
+}
+
+export async function updateInterviewData(
+  sessionId: string,
+  data: { interview_status?: string; interview_date?: string; recruiter_notes?: string }
+): Promise<{ error: string | null }> {
+  const { error } = await supabaseAdmin
+    .from('evaluations')
+    .update(data)
+    .eq('session_id', sessionId);
+  return { error: error?.message || null };
 }
 
 export function useAdmin(authenticated: boolean) {

@@ -28,6 +28,20 @@ function toRow(state: EvaluationState) {
     completed_at:     state.completedAt || null,
     last_activity:    new Date().toISOString(),
     user_agent:       typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    assigned_to:      state.assignedTo || null,
+    answers: {
+      availability:          state.availability,
+      experience:            state.experience,
+      closingRole:           state.closingRole,
+      closingVolume:         state.closingVolume,
+      objectionResponse:     state.objectionResponse,
+      autonomyDesc:          state.autonomyDesc,
+      philosophy:            state.philosophy,
+      philosophyExplanation: state.philosophyExplanation,
+      verificationAnswer:    state.verificationAnswer,
+      jobCount:              state.jobCount,
+      financialSituation:    state.financialSituation,
+    },
   };
 }
 

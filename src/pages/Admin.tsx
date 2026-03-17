@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle } from 'lucide-react';
+import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
-import { useAdmin, AdminEvaluation } from '@/hooks/useAdmin';
+import { useAdmin, AdminEvaluation, updateInterviewData } from '@/hooks/useAdmin';
 import { supabase as supabaseAdmin } from '@/lib/supabase';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
@@ -10,11 +10,19 @@ import { supabase as supabaseAdmin } from '@/lib/supabase';
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'Info2026$';
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
-  elite:      { label: 'ELITE',      className: 'bg-primary/15 text-primary border-primary/40',     dot: 'bg-primary'     },
-  calificado: { label: 'CALIFICADO', className: 'bg-success/15 text-success border-success/40',     dot: 'bg-success'     },
-  potencial:  { label: 'POTENCIAL',  className: 'bg-warning/15 text-warning border-warning/40',     dot: 'bg-warning'     },
-  descartado: { label: 'DESCARTADO', className: 'bg-destructive/15 text-destructive border-destructive/40', dot: 'bg-destructive' },
-  en_progreso:{ label: 'EN PROGRESO',className: 'bg-muted text-muted-foreground border-border',     dot: 'bg-muted-foreground' },
+  elite:       { label: 'ELITE',       className: 'bg-primary/15 text-primary border-primary/40',             dot: 'bg-primary'          },
+  calificado:  { label: 'CALIFICADO',  className: 'bg-success/15 text-success border-success/40',             dot: 'bg-success'          },
+  potencial:   { label: 'POTENCIAL',   className: 'bg-warning/15 text-warning border-warning/40',             dot: 'bg-warning'          },
+  descartado:  { label: 'DESCARTADO',  className: 'bg-destructive/15 text-destructive border-destructive/40', dot: 'bg-destructive'      },
+  en_progreso: { label: 'EN PROGRESO', className: 'bg-muted text-muted-foreground border-border',             dot: 'bg-muted-foreground' },
+};
+
+const INTERVIEW_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  agendada:                  { label: 'Agendada',                  color: 'text-primary'     },
+  entrevistado:              { label: 'Entrevistado',              color: 'text-success'     },
+  no_asistio:                { label: 'No asistió',                color: 'text-destructive' },
+  reprogramado:              { label: 'Reprogramado',              color: 'text-warning'     },
+  rechazado_post_entrevista: { label: 'Rechazado post-entrevista', color: 'text-destructive' },
 };
 
 const SCORE_LABELS: Record<string, string> = {
@@ -23,10 +31,42 @@ const SCORE_LABELS: Record<string, string> = {
   E3_copywriting: 'Copywriting',
   E4_objeciones:  'Objeciones',
   E5_autonomia:   'Autonomía',
-  E6_filosofia:   'Filosofía',
-  C1_estabilidad: 'Estabilidad',
-  V1_penalty:     'Penalización V1',
-  E2_penalty:     'Penalización E2',
+  E6_filosofia:   'Filosofía de ventas',
+  C1_estabilidad: 'Estabilidad laboral',
+  V1_penalty:     'Penalización consistencia',
+  E2_penalty:     'Penalización narrativa',
+};
+
+const SCORE_MAX: Record<string, number> = {
+  E1_cierre: 25, E1_volumen: 25, E3_copywriting: 20, E4_objeciones: 20,
+  E5_autonomia: 15, E6_filosofia: 20, C1_estabilidad: 10,
+  V1_penalty: 10, E2_penalty: 8,
+};
+
+const SCORE_CRITERIA: Record<string, Record<number, string>> = {
+  E1_cierre:      { 25: 'Cierra y cobra directamente', 15: 'Apoya el cierre', 5: 'Solo demos/presentaciones', 0: 'Sin cierre directo' },
+  E1_volumen:     { 25: 'Más de 40 llamadas/día', 18: 'Entre 20 y 39 llamadas/día', 10: 'Entre 10 y 19 llamadas/día', 0: 'Menos de 10 llamadas/día' },
+  E3_copywriting: { 20: 'Gancho con urgencia (top)', 10: 'Mensaje genérico funcional', 0: 'No sabe cómo reactivar' },
+  E4_objeciones:  { 20: 'Redirige con pregunta', 14: 'Defiende el valor del producto', 7: 'Respuesta genérica', 0: 'Ofrece descuento' },
+  E5_autonomia:   { 15: 'Sistema propio de seguimiento', 0: 'Vago o dependiente de instrucciones' },
+  E6_filosofia:   { 20: 'Precalifica profundo', 12: 'Precalifica básico', 5: 'Convierte con técnica', 0: 'Convierte sin argumento' },
+  C1_estabilidad: { 10: '1–2 trabajos anteriores', 5: '3 o más trabajos (riesgo retención)' },
+  V1_penalty:     { '-10': 'Aceptó cifra falsa (–10 pts)', 0: 'Sin penalización' },
+  E2_penalty:     { '-8': 'Narrativa inconsistente (–8 pts)', 0: 'Sin penalización' },
+};
+
+const ANSWER_LABELS: Record<string, string> = {
+  availability:          'Disponibilidad horaria',
+  experience:            'Experiencia en ventas',
+  closingRole:           'Rol en el cierre',
+  closingVolume:         'Volumen de ventas cerradas',
+  objectionResponse:     'Manejo de objeción',
+  autonomyDesc:          'Sistema de seguimiento propio',
+  philosophy:            'Filosofía de ventas (opción)',
+  philosophyExplanation: 'Filosofía de ventas (explicación)',
+  verificationAnswer:    'Respuesta de verificación',
+  jobCount:              'Cantidad de trabajos anteriores',
+  financialSituation:    'Situación financiera actual',
 };
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
@@ -41,11 +81,10 @@ function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: strin
     if (start === end) return;
     const duration = 800;
     const startTime = performance.now();
-
     const tick = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       setDisplay(Math.round(start + (end - start) * eased));
       if (progress < 1) requestAnimationFrame(tick);
       else prevRef.current = end;
@@ -63,7 +102,7 @@ function ScoreBar({ label, value, max = 25 }: { label: string; value: number; ma
   const pct = Math.abs(value) / max * 100;
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="text-muted-foreground w-36 shrink-0">{label}</span>
+      <span className="text-muted-foreground w-40 shrink-0">{label}</span>
       <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
@@ -79,26 +118,21 @@ function ScoreBar({ label, value, max = 25 }: { label: string; value: number; ma
   );
 }
 
-// ─── CV Links — genera URL firmada si es un path de Storage ──────────────────
+// ─── CV Links ─────────────────────────────────────────────────────────────────
 
 function CVLinks({ candidate }: { candidate: AdminEvaluation }) {
   const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const isStoragePath = (url: string) =>
-    url && !url.startsWith('http') && url.includes('/');
+  const isStoragePath = (url: string) => url && !url.startsWith('http') && url.includes('/');
 
   useEffect(() => {
     const raw = candidate.cv_url;
     if (!raw) return;
     if (isStoragePath(raw)) {
       setLoading(true);
-      supabaseAdmin.storage
-        .from('cvs')
-        .createSignedUrl(raw, 60 * 60) // 1 hora
-        .then(({ data }) => {
-          if (data?.signedUrl) setCvUrl(data.signedUrl);
-        })
+      supabaseAdmin.storage.from('cvs').createSignedUrl(raw, 60 * 60)
+        .then(({ data }) => { if (data?.signedUrl) setCvUrl(data.signedUrl); })
         .finally(() => setLoading(false));
     } else {
       setCvUrl(raw);
@@ -112,36 +146,446 @@ function CVLinks({ candidate }: { candidate: AdminEvaluation }) {
       <h4 className="text-foreground font-semibold mb-3 text-sm">CV / LinkedIn</h4>
       <div className="flex flex-col gap-2">
         {candidate.linkedin_url && (
-          <a
-            href={candidate.linkedin_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-primary hover:underline text-sm"
-          >
-            <ExternalLink size={13} />
-            {candidate.linkedin_url}
+          <a href={candidate.linkedin_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 text-primary hover:underline text-sm">
+            <ExternalLink size={13} />{candidate.linkedin_url}
           </a>
         )}
         {candidate.cv_url && (
-          loading ? (
-            <span className="flex items-center gap-2 text-muted-foreground text-sm">
-              <span className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
-              Generando enlace...
-            </span>
-          ) : cvUrl ? (
-            <a
-              href={cvUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-primary hover:underline text-sm"
-            >
-              <ExternalLink size={13} />
-              Ver CV del candidato
-            </a>
-          ) : null
+          loading
+            ? <span className="flex items-center gap-2 text-muted-foreground text-sm">
+                <span className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                Generando enlace...
+              </span>
+            : cvUrl
+              ? <a href={cvUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-primary hover:underline text-sm">
+                  <ExternalLink size={13} />Ver CV del candidato
+                </a>
+              : null
         )}
       </div>
     </div>
+  );
+}
+
+// ─── Generador de resumen ─────────────────────────────────────────────────────
+
+function buildSummary(c: AdminEvaluation): string {
+  const lines: string[] = [];
+
+  const statusLabel = STATUS_CONFIG[c.status]?.label || c.status;
+  lines.push(`Resultado: ${statusLabel} — ${c.score_total} puntos.`);
+
+  if (c.location) lines.push(`Ubicación: ${c.location}.`);
+  if (c.age) lines.push(`Edad: ${c.age} años${c.marital_status ? `, ${c.marital_status}` : ''}.`);
+
+  // Fortalezas (bloques con puntaje ≥ 80% del máximo)
+  const strengths: string[] = [];
+  if (c.score_breakdown) {
+    for (const [key, val] of Object.entries(c.score_breakdown)) {
+      const max = SCORE_MAX[key] || 25;
+      if ((val as number) >= max * 0.8 && (val as number) > 0) {
+        strengths.push(SCORE_LABELS[key] || key);
+      }
+    }
+  }
+  if (strengths.length) lines.push(`Fortalezas destacadas: ${strengths.join(', ')}.`);
+
+  // Flags de riesgo activos
+  const activeFlags: string[] = [];
+  if (c.flags) {
+    for (const [key, val] of Object.entries(c.flags)) {
+      if (val && key !== 'consintio_proceso' && key !== 'b_verif_aplicada') {
+        activeFlags.push(key.replace(/_/g, ' '));
+      }
+    }
+  }
+  if (activeFlags.length) lines.push(`Señales de riesgo: ${activeFlags.join(', ')}.`);
+
+  if (c.disqualify_reason) lines.push(`Descartado por: ${c.disqualify_reason.replace(/_/g, ' ')}.`);
+
+  if (c.daily_calls) lines.push(`Volumen declarado: ${c.daily_calls} llamadas/día.`);
+  if (c.last_income) lines.push(`Último ingreso mensual: $${c.last_income.toLocaleString()}.`);
+
+  // Acción sugerida
+  if (c.status === 'elite' || c.status === 'calificado') {
+    lines.push('Acción: Agendar entrevista de validación.');
+  } else if (c.status === 'potencial') {
+    lines.push('Acción: Contactar en 48 h para seguimiento.');
+  } else if (c.status === 'descartado') {
+    lines.push('Acción: No procede. Archivar.');
+  }
+
+  return lines.join(' ');
+}
+
+// ─── Modal de detalle ─────────────────────────────────────────────────────────
+
+type ModalTab = 'resumen' | 'qa' | 'score' | 'entrevista';
+
+function DetailModal({ candidate, onClose, onUpdate }: {
+  candidate: AdminEvaluation;
+  onClose: () => void;
+  onUpdate: (updated: Partial<AdminEvaluation>) => void;
+}) {
+  const [activeTab, setActiveTab] = useState<ModalTab>('resumen');
+  const [interviewStatus, setInterviewStatus] = useState(candidate.interview_status || '');
+  const [interviewDate, setInterviewDate]     = useState(
+    candidate.interview_date ? candidate.interview_date.slice(0, 16) : ''
+  );
+  const [recruiterNotes, setRecruiterNotes]   = useState(candidate.recruiter_notes || '');
+  const [saving, setSaving] = useState(false);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveInterview = useCallback(async (patch: {
+    interview_status?: string;
+    interview_date?: string;
+    recruiter_notes?: string;
+  }) => {
+    setSaving(true);
+    await updateInterviewData(candidate.session_id, patch);
+    onUpdate(patch);
+    setSaving(false);
+  }, [candidate.session_id, onUpdate]);
+
+  const handleStatusChange = (val: string) => {
+    setInterviewStatus(val);
+    saveInterview({ interview_status: val || undefined });
+  };
+
+  const handleDateChange = (val: string) => {
+    setInterviewDate(val);
+    saveInterview({ interview_date: val ? new Date(val).toISOString() : undefined });
+  };
+
+  const handleNotesChange = (val: string) => {
+    setRecruiterNotes(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      saveInterview({ recruiter_notes: val });
+    }, 800);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const cfg = STATUS_CONFIG[candidate.status] || STATUS_CONFIG.descartado;
+  const summary = buildSummary(candidate);
+  const hasAnswers = candidate.answers && Object.values(candidate.answers).some(v => v);
+
+  const TABS: { id: ModalTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'resumen',    label: 'Resumen',    icon: <FileText size={14} />    },
+    { id: 'qa',         label: 'Respuestas', icon: <MessageSquare size={14} /> },
+    { id: 'score',      label: 'Evaluación', icon: <BarChart2 size={14} />   },
+    { id: 'entrevista', label: 'Entrevista', icon: <Calendar size={14} />    },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 print:static print:bg-white print:backdrop-blur-none"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1,    y: 0  }}
+        exit={{   opacity: 0, scale: 0.95, y: 16  }}
+        transition={{ duration: 0.25 }}
+        className="glass-card rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col print:max-h-none print:shadow-none print:border-0 print:rounded-none"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 pb-4 border-b border-border/40 print:border-black">
+          <div>
+            <h3 className="text-foreground font-bold text-xl print:text-black">{candidate.name}</h3>
+            <div className="flex items-center flex-wrap gap-2 mt-1">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.className} print:border-black print:text-black print:bg-white`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} print:bg-black`} />
+                {cfg.label}
+              </span>
+              <span className="text-muted-foreground text-xs print:text-black">
+                Score: <strong className="text-foreground print:text-black">{candidate.score_total} pts</strong>
+              </span>
+              {candidate.assigned_to && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground print:text-black">
+                  <User size={11} />
+                  {candidate.assigned_to}
+                </span>
+              )}
+              {candidate.interview_status && (
+                <span className={`text-xs font-medium ${INTERVIEW_STATUS_CONFIG[candidate.interview_status]?.color || ''} print:text-black`}>
+                  · {INTERVIEW_STATUS_CONFIG[candidate.interview_status]?.label || candidate.interview_status}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 print:hidden">
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <Printer size={13} />
+              Imprimir / PDF
+            </button>
+            <button
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-3 print:hidden">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              {tab.icon}{tab.label}
+            </button>
+          ))}
+          {saving && <span className="ml-auto text-xs text-muted-foreground self-center">Guardando...</span>}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-5 print:overflow-visible">
+
+          {/* ── TAB: RESUMEN ── */}
+          {(activeTab === 'resumen') && (
+            <div className="space-y-5 print:block">
+              {/* Datos personales */}
+              <div>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Datos del Candidato</h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-muted/20 rounded-xl p-4 text-sm print:bg-white print:border print:border-black print:p-3">
+                  {[
+                    ['Teléfono',       candidate.phone],
+                    ['Email',          candidate.email],
+                    ['Ubicación',      candidate.location],
+                    ['Edad',           candidate.age],
+                    ['Estado civil',   candidate.marital_status],
+                    ['Llamadas/día',   candidate.daily_calls],
+                    ['Último ingreso', candidate.last_income ? `$${candidate.last_income.toLocaleString()}` : null],
+                    ['Evaluación',     new Date(candidate.created_at).toLocaleString('es-MX')],
+                  ].map(([label, value]) => (
+                    <div key={label as string}>
+                      <span className="text-muted-foreground text-xs print:text-black">{label}</span>
+                      <p className="text-foreground font-medium mt-0.5 print:text-black">
+                        {value || <span className="text-muted-foreground/50 text-xs print:text-black">—</span>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resumen automático */}
+              <div>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Resumen del Perfil</h4>
+                <p className="text-muted-foreground text-sm bg-muted/10 rounded-xl p-4 leading-relaxed print:text-black print:bg-white print:border print:border-black print:p-3">
+                  {summary}
+                </p>
+              </div>
+
+              {/* Razón de salida */}
+              {candidate.exit_reason && (
+                <div>
+                  <h4 className="text-foreground font-semibold mb-2 text-sm print:text-black">Razón de salida del último trabajo</h4>
+                  <p className="text-muted-foreground text-sm bg-muted/20 rounded-xl p-3 leading-relaxed print:text-black print:bg-white print:border print:border-black">
+                    {candidate.exit_reason}
+                  </p>
+                </div>
+              )}
+
+              {/* Highlight */}
+              {candidate.highlight && (
+                <div>
+                  <h4 className="text-foreground font-semibold mb-2 text-sm print:text-black">Mejor Mensaje de Reactivación</h4>
+                  <p className="text-muted-foreground text-sm bg-primary/5 border border-primary/20 rounded-xl p-3 leading-relaxed italic print:text-black print:bg-white print:border-black">
+                    "{candidate.highlight}"
+                  </p>
+                </div>
+              )}
+
+              {/* CV */}
+              <CVLinks candidate={candidate} />
+            </div>
+          )}
+
+          {/* ── TAB: RESPUESTAS ── */}
+          {activeTab === 'qa' && (
+            <div className="space-y-3 print:block">
+              <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider print:text-black">Preguntas y Respuestas</h4>
+              {hasAnswers ? (
+                Object.entries(candidate.answers!).map(([key, value]) => {
+                  if (!value) return null;
+                  return (
+                    <div key={key} className="bg-muted/10 rounded-xl p-4 print:border print:border-black print:rounded-none print:mb-2">
+                      <p className="text-xs text-muted-foreground mb-1 print:text-black">{ANSWER_LABELS[key] || key}</p>
+                      <p className="text-foreground text-sm leading-relaxed print:text-black">{value}</p>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-muted-foreground text-sm bg-muted/10 rounded-xl p-4">
+                  Esta evaluación no tiene respuestas detalladas guardadas.
+                  Las respuestas completas se guardan a partir de hoy en evaluaciones nuevas.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── TAB: EVALUACIÓN ── */}
+          {activeTab === 'score' && (
+            <div className="space-y-5 print:block">
+              {/* Score breakdown */}
+              <div>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Desglose de Score</h4>
+                <div className="space-y-2.5 bg-muted/10 rounded-xl p-4 print:border print:border-black print:rounded-none">
+                  {candidate.score_breakdown && Object.entries(candidate.score_breakdown).map(([key, val]) => (
+                    <ScoreBar
+                      key={key}
+                      label={SCORE_LABELS[key] || key}
+                      value={val as number}
+                      max={SCORE_MAX[key] || 25}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Criterios de evaluación */}
+              <div>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Criterios Aplicados</h4>
+                <div className="space-y-2">
+                  {candidate.score_breakdown && Object.entries(candidate.score_breakdown).map(([key, val]) => {
+                    const criteria = SCORE_CRITERIA[key];
+                    if (!criteria) return null;
+                    const score = val as number;
+                    const label = criteria[score] || criteria[String(score)] || `${score} pts`;
+                    return (
+                      <div key={key} className="flex items-start gap-3 text-sm bg-muted/10 rounded-lg p-3 print:border print:border-black print:rounded-none print:mb-1">
+                        <span className="text-muted-foreground w-36 shrink-0 print:text-black">{SCORE_LABELS[key] || key}</span>
+                        <span className={`flex-1 print:text-black ${score < 0 ? 'text-destructive' : score === 0 ? 'text-warning' : 'text-foreground'}`}>
+                          {label}
+                        </span>
+                        <span className={`font-bold shrink-0 print:text-black ${score < 0 ? 'text-destructive' : 'text-primary'}`}>
+                          {score > 0 ? `+${score}` : score}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Flags */}
+              {candidate.flags && Object.entries(candidate.flags).some(([, v]) => v) && (
+                <div>
+                  <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Flags Detectados</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(candidate.flags).filter(([, v]) => v).map(([key]) => (
+                      <span key={key} className="px-3 py-1 rounded-full bg-warning/15 text-warning text-xs border border-warning/30 print:text-black print:bg-white print:border-black">
+                        {key.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Descarte */}
+              {candidate.disqualify_reason && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 print:border-black print:bg-white">
+                  <h4 className="text-destructive font-semibold mb-1 text-sm print:text-black">Razón de Descarte</h4>
+                  <p className="text-destructive/80 text-sm print:text-black">{candidate.disqualify_reason.replace(/_/g, ' ')}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TAB: ENTREVISTA ── */}
+          {activeTab === 'entrevista' && (
+            <div className="space-y-5 print:block">
+              <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider print:text-black">Gestión de Entrevista</h4>
+
+              {/* Reclutador asignado */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Reclutador asignado</label>
+                <div className="flex items-center gap-2 bg-muted/20 rounded-xl p-3 print:border print:border-black">
+                  <User size={15} className="text-muted-foreground print:text-black" />
+                  <span className="text-foreground text-sm print:text-black">
+                    {candidate.assigned_to || <span className="text-muted-foreground/50 italic">Sin asignar</span>}
+                  </span>
+                </div>
+              </div>
+
+              {/* Estado de la entrevista */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Estado de la entrevista</label>
+                <div className="relative print:hidden">
+                  <select
+                    value={interviewStatus}
+                    onChange={e => handleStatusChange(e.target.value)}
+                    className="w-full appearance-none bg-input border border-border rounded-xl px-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  >
+                    <option value="">— Sin estado —</option>
+                    {Object.entries(INTERVIEW_STATUS_CONFIG).map(([val, { label }]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+                <p className="hidden print:block text-sm text-black">
+                  {interviewStatus ? INTERVIEW_STATUS_CONFIG[interviewStatus]?.label : 'Sin estado'}
+                </p>
+              </div>
+
+              {/* Fecha de entrevista */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Fecha de entrevista</label>
+                <input
+                  type="datetime-local"
+                  value={interviewDate}
+                  onChange={e => handleDateChange(e.target.value)}
+                  className="w-full bg-input border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all print:hidden"
+                />
+                <p className="hidden print:block text-sm text-black">
+                  {interviewDate
+                    ? new Date(interviewDate).toLocaleString('es-MX')
+                    : 'Sin fecha asignada'}
+                </p>
+              </div>
+
+              {/* Notas del reclutador */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Notas del reclutador</label>
+                <textarea
+                  value={recruiterNotes}
+                  onChange={e => handleNotesChange(e.target.value)}
+                  placeholder="Observaciones post-entrevista, impresiones, próximos pasos..."
+                  rows={5}
+                  className="w-full bg-input border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none print:hidden"
+                />
+                {recruiterNotes && (
+                  <p className="hidden print:block text-sm text-black whitespace-pre-wrap border border-black p-3">
+                    {recruiterNotes}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -164,30 +608,24 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Background radial glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
-
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className={`glass-card rounded-2xl p-8 max-w-sm w-full relative ${shake ? 'animate-[shake_0.4s_ease]' : ''}`}
       >
-        <div className="flex justify-center mb-8">
-          <MagnetLogo size="lg" />
-        </div>
-
+        <div className="flex justify-center mb-8"><MagnetLogo size="lg" /></div>
         <h2 className="text-foreground font-bold text-xl text-center mb-1">Panel de Administración</h2>
         <p className="text-muted-foreground text-sm text-center mb-8">Acceso restringido · Magnetraffic</p>
-
         <div className="space-y-3">
           <input
             type="password"
             value={password}
-            onChange={(e) => { setPassword(e.target.value); setError(false); }}
-            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            onChange={e => { setPassword(e.target.value); setError(false); }}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             placeholder="Contraseña de acceso"
             autoFocus
             className={`w-full bg-input border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 transition-all ${
@@ -195,7 +633,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             }`}
           />
           {error && (
-            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="text-destructive text-xs flex items-center gap-1">
+            <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              className="text-destructive text-xs flex items-center gap-1">
               <AlertCircle size={12} /> Contraseña incorrecta
             </motion.p>
           )}
@@ -219,6 +658,7 @@ export default function Admin() {
   );
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [recruiterFilter, setRecruiterFilter] = useState<string>('all');
   const [selectedCandidate, setSelectedCandidate] = useState<AdminEvaluation | null>(null);
 
   const { evaluations, loading, error, refetch } = useAdmin(authenticated);
@@ -233,25 +673,36 @@ export default function Admin() {
     setAuthenticated(false);
   };
 
+  const handleModalUpdate = useCallback((updated: Partial<AdminEvaluation>) => {
+    if (!selectedCandidate) return;
+    setSelectedCandidate(prev => prev ? { ...prev, ...updated } : prev);
+  }, [selectedCandidate]);
+
+  // Lista de reclutadores únicos
+  const recruiters = useMemo(() => {
+    const set = new Set(evaluations.map(e => e.assigned_to).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [evaluations]);
+
   const filtered = useMemo(() => {
-    return evaluations.filter((e) => {
+    return evaluations.filter(e => {
       const matchesSearch = !search ||
         e.name.toLowerCase().includes(search.toLowerCase()) ||
         e.phone.includes(search) ||
         (e.email || '').toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesStatus    = statusFilter === 'all' || e.status === statusFilter;
+      const matchesRecruiter = recruiterFilter === 'all' || e.assigned_to === recruiterFilter;
+      return matchesSearch && matchesStatus && matchesRecruiter;
     });
-  }, [evaluations, search, statusFilter]);
+  }, [evaluations, search, statusFilter, recruiterFilter]);
 
   const stats = useMemo(() => {
-    const completed = evaluations.filter(e => e.status !== 'en_progreso');
-    const today = new Date().toDateString();
-    const todayEvals = evaluations.filter(e => new Date(e.created_at).toDateString() === today);
-    const qualified = evaluations.filter(e => e.status === 'elite' || e.status === 'calificado').length;
-    const discarded = evaluations.filter(e => e.status === 'descartado').length;
-    const durations = completed
-      .filter(e => e.completed_at)
+    const completed   = evaluations.filter(e => e.status !== 'en_progreso');
+    const today       = new Date().toDateString();
+    const todayEvals  = evaluations.filter(e => new Date(e.created_at).toDateString() === today);
+    const qualified   = evaluations.filter(e => e.status === 'elite' || e.status === 'calificado').length;
+    const discarded   = evaluations.filter(e => e.status === 'descartado').length;
+    const durations   = completed.filter(e => e.completed_at)
       .map(e => (new Date(e.completed_at!).getTime() - new Date(e.created_at).getTime()) / 60000);
     const avgDuration = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
     return {
@@ -268,63 +719,51 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md px-4 py-3">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md px-4 py-3 print:hidden">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <MagnetLogo size="sm" />
           <div className="flex items-center gap-3">
-            <button
-              onClick={refetch}
-              disabled={loading}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50"
-            >
+            <button onClick={refetch} disabled={loading}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50">
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
               Actualizar
             </button>
-            <button
-              onClick={handleLogout}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50"
-            >
+            <button onClick={handleLogout}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50">
               Salir
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 print:hidden">
 
-        {/* Error state */}
         {error && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive"
-          >
+            className="flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive">
             <AlertCircle size={16} />
             <span>Error al cargar datos: {error}</span>
             <button onClick={refetch} className="ml-auto underline hover:no-underline">Reintentar</button>
           </motion.div>
         )}
 
-        {/* Stats cards */}
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: 'Total',           value: stats.total,        suffix: '',   colorClass: 'text-foreground'    },
-            { label: 'Hoy',             value: stats.todayCount,   suffix: '',   colorClass: 'text-primary'       },
-            { label: 'Calificados',     value: stats.qualifiedPct, suffix: '%',  colorClass: 'text-success'       },
-            { label: 'Descartados',     value: stats.discardedPct, suffix: '%',  colorClass: 'text-destructive'   },
-            { label: 'Duración prom.',  value: stats.avgDuration,  suffix: ' min', colorClass: 'text-muted-foreground' },
+            { label: 'Total',          value: stats.total,        suffix: '',     colorClass: 'text-foreground'       },
+            { label: 'Hoy',            value: stats.todayCount,   suffix: '',     colorClass: 'text-primary'          },
+            { label: 'Calificados',    value: stats.qualifiedPct, suffix: '%',    colorClass: 'text-success'          },
+            { label: 'Descartados',    value: stats.discardedPct, suffix: '%',    colorClass: 'text-destructive'      },
+            { label: 'Duración prom.', value: stats.avgDuration,  suffix: ' min', colorClass: 'text-muted-foreground' },
           ].map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
+            <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07 }}
-              className="spotlight-card glass-card rounded-xl p-4"
-            >
+              className="spotlight-card glass-card rounded-xl p-4">
               <p className="text-muted-foreground text-xs mb-1.5">{stat.label}</p>
               <p className={`text-2xl font-bold ${stat.colorClass}`}>
                 {loading
                   ? <span className="inline-block w-8 h-6 bg-muted/50 rounded animate-pulse" />
-                  : <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-                }
+                  : <AnimatedCounter value={stat.value} suffix={stat.suffix} />}
               </p>
             </motion.div>
           ))}
@@ -335,19 +774,14 @@ export default function Admin() {
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por nombre, teléfono o email..."
               className="w-full bg-input border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </div>
           <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            >
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+              className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
               <option value="all">Todos los estados</option>
               <option value="elite">Elite</option>
               <option value="calificado">Calificado</option>
@@ -357,6 +791,16 @@ export default function Admin() {
             </select>
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
+          {recruiters.length > 0 && (
+            <div className="relative">
+              <select value={recruiterFilter} onChange={e => setRecruiterFilter(e.target.value)}
+                className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
+                <option value="all">Todos los reclutadores</option>
+                {recruiters.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          )}
         </div>
 
         {/* Table */}
@@ -373,7 +817,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/60">
-                    {['Nombre', 'Teléfono', 'Email', 'Ubicación', 'Score', 'Resultado', 'Fecha', 'Duración', ''].map((h) => (
+                    {['Nombre', 'Teléfono', 'Ubicación', 'Score', 'Resultado', 'Reclutador', 'Entrevista', 'Fecha', ''].map(h => (
                       <th key={h} className="text-left text-muted-foreground font-medium px-4 py-3 text-xs uppercase tracking-wider">
                         {h}
                       </th>
@@ -384,9 +828,7 @@ export default function Admin() {
                   <AnimatePresence>
                     {filtered.map((ev, i) => {
                       const cfg = STATUS_CONFIG[ev.status] || STATUS_CONFIG.descartado;
-                      const duration = ev.completed_at
-                        ? Math.round((new Date(ev.completed_at).getTime() - new Date(ev.created_at).getTime()) / 60000)
-                        : null;
+                      const intCfg = ev.interview_status ? INTERVIEW_STATUS_CONFIG[ev.interview_status] : null;
                       return (
                         <motion.tr
                           key={ev.session_id}
@@ -398,7 +840,6 @@ export default function Admin() {
                         >
                           <td className="px-4 py-3 text-foreground font-medium">{ev.name}</td>
                           <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{ev.phone}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{ev.email || <span className="text-muted-foreground/40">—</span>}</td>
                           <td className="px-4 py-3 text-muted-foreground">{ev.location || <span className="text-muted-foreground/40">—</span>}</td>
                           <td className="px-4 py-3">
                             <span className="text-foreground font-bold">{ev.score_total}</span>
@@ -410,15 +851,18 @@ export default function Admin() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
-                            {new Date(ev.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' })}
+                            {ev.assigned_to || <span className="text-muted-foreground/40">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            {intCfg
+                              ? <span className={`font-medium ${intCfg.color}`}>{intCfg.label}</span>
+                              : <span className="text-muted-foreground/40">—</span>}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
-                            {duration !== null ? `${duration} min` : <span className="text-muted-foreground/40">—</span>}
+                            {new Date(ev.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' })}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-primary text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                              Ver →
-                            </span>
+                            <span className="text-primary text-xs opacity-0 group-hover:opacity-100 transition-opacity">Ver →</span>
                           </td>
                         </motion.tr>
                       );
@@ -445,129 +889,14 @@ export default function Admin() {
         </p>
       </main>
 
-      {/* Detail Modal */}
+      {/* Modal */}
       <AnimatePresence>
         {selectedCandidate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setSelectedCandidate(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1,    y: 0  }}
-              exit={{   opacity: 0, scale: 0.95, y: 16  }}
-              transition={{ duration: 0.25 }}
-              className="glass-card rounded-2xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal header */}
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h3 className="text-foreground font-bold text-xl">{selectedCandidate.name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    {(() => {
-                      const cfg = STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.descartado;
-                      return (
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.className}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                          {cfg.label}
-                        </span>
-                      );
-                    })()}
-                    <span className="text-muted-foreground text-xs">
-                      Score: <strong className="text-foreground">{selectedCandidate.score_total} pts</strong>
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedCandidate(null)}
-                  className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Datos del candidato */}
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-6 text-sm bg-muted/20 rounded-xl p-4">
-                {[
-                  ['Teléfono',     selectedCandidate.phone],
-                  ['Email',        selectedCandidate.email],
-                  ['Ubicación',    selectedCandidate.location],
-                  ['Edad',         selectedCandidate.age],
-                  ['Estado civil', selectedCandidate.marital_status],
-                  ['Llamadas/día', selectedCandidate.daily_calls],
-                  ['Último ingreso', selectedCandidate.last_income ? `$${selectedCandidate.last_income.toLocaleString()}` : null],
-                  ['Fecha inicio', new Date(selectedCandidate.created_at).toLocaleString('es-MX')],
-                ].map(([label, value]) => (
-                  <div key={label as string}>
-                    <span className="text-muted-foreground text-xs">{label}</span>
-                    <p className="text-foreground font-medium mt-0.5">{value || <span className="text-muted-foreground/50 text-xs">—</span>}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Score breakdown */}
-              <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider">Desglose de Score</h4>
-              <div className="space-y-2.5 mb-6 bg-muted/10 rounded-xl p-4">
-                {selectedCandidate.score_breakdown && Object.entries(selectedCandidate.score_breakdown).map(([key, val]) => (
-                  <ScoreBar
-                    key={key}
-                    label={SCORE_LABELS[key] || key}
-                    value={val as number}
-                    max={key.includes('penalty') ? 10 : 25}
-                  />
-                ))}
-              </div>
-
-              {/* Flags */}
-              {selectedCandidate.flags && Object.entries(selectedCandidate.flags).some(([, v]) => v) && (
-                <div className="mb-6">
-                  <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider">Flags Detectados</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(selectedCandidate.flags).filter(([, v]) => v).map(([key]) => (
-                      <span key={key} className="px-3 py-1 rounded-full bg-warning/15 text-warning text-xs border border-warning/30">
-                        {key.replace(/_/g, ' ')}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Descarte */}
-              {selectedCandidate.disqualify_reason && (
-                <div className="mb-6 bg-destructive/10 border border-destructive/20 rounded-xl p-4">
-                  <h4 className="text-destructive font-semibold mb-1 text-sm">Razón de Descarte</h4>
-                  <p className="text-destructive/80 text-sm">{selectedCandidate.disqualify_reason.replace(/_/g, ' ')}</p>
-                </div>
-              )}
-
-              {/* Razón de salida */}
-              {selectedCandidate.exit_reason && (
-                <div className="mb-6">
-                  <h4 className="text-foreground font-semibold mb-2 text-sm">Razón de salida del último trabajo</h4>
-                  <p className="text-muted-foreground text-sm bg-muted/20 rounded-xl p-3 leading-relaxed">
-                    {selectedCandidate.exit_reason}
-                  </p>
-                </div>
-              )}
-
-              {/* Highlight */}
-              {selectedCandidate.highlight && (
-                <div className="mb-6">
-                  <h4 className="text-foreground font-semibold mb-2 text-sm">Mejor Mensaje de Reactivación</h4>
-                  <p className="text-muted-foreground text-sm bg-primary/5 border border-primary/20 rounded-xl p-3 leading-relaxed italic">
-                    "{selectedCandidate.highlight}"
-                  </p>
-                </div>
-              )}
-
-              {/* CV / LinkedIn */}
-              <CVLinks candidate={selectedCandidate} />
-            </motion.div>
-          </motion.div>
+          <DetailModal
+            candidate={selectedCandidate}
+            onClose={() => setSelectedCandidate(null)}
+            onUpdate={handleModalUpdate}
+          />
         )}
       </AnimatePresence>
     </div>
