@@ -34,7 +34,7 @@ export interface AdminEvaluation {
 
 export async function updateInterviewData(
   sessionId: string,
-  data: { interview_status?: string; interview_date?: string; recruiter_notes?: string }
+  data: { interview_status?: string; interview_date?: string; recruiter_notes?: string; assigned_to?: string }
 ): Promise<{ error: string | null }> {
   const { error } = await supabaseAdmin
     .from('evaluations')

@@ -235,6 +235,7 @@ function DetailModal({ candidate, onClose, onUpdate }: {
     candidate.interview_date ? candidate.interview_date.slice(0, 16) : ''
   );
   const [recruiterNotes, setRecruiterNotes]   = useState(candidate.recruiter_notes || '');
+  const [assignedTo, setAssignedTo]           = useState(candidate.assigned_to || '');
   const [saving, setSaving] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -243,6 +244,7 @@ function DetailModal({ candidate, onClose, onUpdate }: {
     interview_status?: string;
     interview_date?: string;
     recruiter_notes?: string;
+    assigned_to?: string;
   }) => {
     setSaving(true);
     await updateInterviewData(candidate.session_id, patch);
@@ -265,6 +267,14 @@ function DetailModal({ candidate, onClose, onUpdate }: {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       saveInterview({ recruiter_notes: val });
+    }, 800);
+  };
+
+  const handleAssignedToChange = (val: string) => {
+    setAssignedTo(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      saveInterview({ assigned_to: val });
     }, 800);
   };
 
@@ -519,12 +529,19 @@ function DetailModal({ candidate, onClose, onUpdate }: {
               {/* Reclutador asignado */}
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block print:text-black">Reclutador asignado</label>
-                <div className="flex items-center gap-2 bg-muted/20 rounded-xl p-3 print:border print:border-black">
-                  <User size={15} className="text-muted-foreground print:text-black" />
-                  <span className="text-foreground text-sm print:text-black">
-                    {candidate.assigned_to || <span className="text-muted-foreground/50 italic">Sin asignar</span>}
-                  </span>
+                <div className="relative print:hidden">
+                  <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    value={assignedTo}
+                    onChange={e => handleAssignedToChange(e.target.value)}
+                    placeholder="Nombre del reclutador..."
+                    className="w-full bg-input border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  />
                 </div>
+                <p className="hidden print:block text-sm text-black border border-black p-3 rounded">
+                  {assignedTo || 'Sin asignar'}
+                </p>
               </div>
 
               {/* Estado de la entrevista */}
