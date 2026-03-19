@@ -5,8 +5,8 @@ import MagnetLogo from '@/components/MagnetLogo';
 import { EvaluationState } from '@/types/evaluation';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const CALENDAR_ELITE = import.meta.env.VITE_CALENDAR_ELITE || 'https://crm.yainsurance.us/widget/bookings/closer-entrevistas';
-const CALENDAR_STD   = import.meta.env.VITE_CALENDAR_STD   || 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
+const CALENDAR_ELITE = import.meta.env.VITE_CALENDAR_ELITE || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
+const CALENDAR_STD   = import.meta.env.VITE_CALENDAR_STD   || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
 
 // ─── Particle burst para Elite ────────────────────────────────────────────────
 

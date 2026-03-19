@@ -3,9 +3,9 @@ import { EvaluationState } from '@/types/evaluation';
 const WEBHOOK_URL = import.meta.env.VITE_GHL_WEBHOOK_URL;
 
 const CALENDAR_ELITE = import.meta.env.VITE_CALENDAR_ELITE
-  || 'https://crm.yainsurance.us/widget/bookings/closer-entrevistas';
+  || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
 const CALENDAR_STD   = import.meta.env.VITE_CALENDAR_STD
-  || 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
+  || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
 
 export interface WebhookPayload {
   name:          string;
