@@ -7,14 +7,19 @@ const supabase = createClient(
 
 const WEBHOOK_SECRET = Deno.env.get('WEBHOOK_SECRET') || 'magtrrhh2026';
 
-// Mapeo de nombre/email GHL → etiqueta de reclutador
+// Mapeo de nombre/email/ID GHL → etiqueta de reclutador
 // Agregar nuevas entradas cuando se incorporen más reclutadores
 const RECRUITER_MAP: Record<string, string> = {
-  'juliana castrillon':         'Reclutador 1',
-  'juliana castrillón':         'Reclutador 1',
-  'manager@finanzaparalatinos.com': 'Reclutador 1',
-  'traduce us':                 'Reclutador 2',
-  'info@traduce.us':            'Reclutador 2',
+  // Juliana Castrillón (Reclutador 1) — múltiples formatos posibles
+  'juliana castrillon':              'Reclutador 1',
+  'juliana castrillón':              'Reclutador 1',
+  'juliana':                         'Reclutador 1',
+  'manager@finanzaparalatinos.com':  'Reclutador 1',
+  'y9etbqml6yxo6z3as8xw':           'Reclutador 1',  // GHL user ID (enviado por n8n)
+  // Traduce US (Reclutador 2)
+  'traduce us':                      'Reclutador 2',
+  'info@traduce.us':                 'Reclutador 2',
+  'blcv7ez4gifnduyк1vry':            'Reclutador 2',  // GHL user ID
 };
 
 function resolveRecruiter(user: { firstName?: string; lastName?: string; email?: string } | undefined): string | null {
@@ -47,11 +52,23 @@ Deno.serve(async (req: Request) => {
   }
 
   // GHL envía el body completo del contacto — extraer los campos correctos
-  const rawPhone      = body.phone || body.customData?.phone || '';
-  const interviewDate = body.calendar?.startTime || body.customData?.interview_date || null;
-  const assignedTo    = resolveRecruiter(body.user) || body.customData?.assigned_to || null;
+  // Log completo para diagnóstico (keys del body)
+  console.log('[body keys]', Object.keys(body));
+  console.log('[body raw]', JSON.stringify(body).slice(0, 500));
 
-  console.log('[parsed]', { rawPhone, interviewDate, assignedTo });
+  const rawPhone      = body.phone || body.customData?.phone || '';
+  const interviewDate = body.calendar?.startTime || body.interview_date || body.customData?.interview_date || null;
+
+  const rawAssignedTo = (body.assigned_to || body.customData?.assigned_to || '') as string;
+  // Intentar resolver: primero objeto user (si viene), luego mapa por nombre/email/ID
+  const resolved = resolveRecruiter(body.user)
+    || RECRUITER_MAP[rawAssignedTo.trim().toLowerCase()]
+    || (rawAssignedTo.trim() ? rawAssignedTo.trim() : null);
+
+  // Si no se resuelve el reclutador, NO sobreescribir el valor existente en DB
+  const assignedTo = resolved;
+
+  console.log('[parsed]', { rawPhone, interviewDate, rawAssignedTo, assignedTo });
 
   if (!rawPhone) {
     return new Response(JSON.stringify({ error: 'Missing phone' }), { status: 400 });
@@ -79,13 +96,18 @@ Deno.serve(async (req: Request) => {
 
   const match = rows[0];
 
+  // Solo incluir assigned_to en el update si se resolvió (evitar sobreescribir con null)
+  const updatePayload: Record<string, unknown> = {
+    interview_status: 'agendada',
+    interview_date:   interviewDate,
+  };
+  if (assignedTo !== null) {
+    updatePayload.assigned_to = assignedTo;
+  }
+
   const { error: updateError } = await supabase
     .from('evaluations')
-    .update({
-      interview_status: 'agendada',
-      interview_date:   interviewDate,
-      assigned_to:      assignedTo,
-    })
+    .update(updatePayload)
     .eq('session_id', match.session_id);
 
   if (updateError) {

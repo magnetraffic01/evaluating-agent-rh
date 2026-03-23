@@ -220,6 +220,16 @@ function buildSummary(c: AdminEvaluation): string {
   return lines.join(' ');
 }
 
+// Normaliza IDs de GHL a etiquetas legibles (usada en tabla y modal)
+function normalizeRecruiter(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const map: Record<string, string> = {
+    'y9etbqml6yxo6z3as8xw': 'Reclutador 1',
+    'blcv7ez4gifnduyк1vry':  'Reclutador 2',
+  };
+  return map[value.toLowerCase()] ?? value;
+}
+
 // ─── Modal de detalle ─────────────────────────────────────────────────────────
 
 type ModalTab = 'resumen' | 'qa' | 'score' | 'entrevista';
@@ -324,7 +334,7 @@ function DetailModal({ candidate, onClose, onUpdate }: {
               {candidate.assigned_to && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground print:text-black">
                   <User size={11} />
-                  {candidate.assigned_to}
+                  {normalizeRecruiter(candidate.assigned_to)}
                 </span>
               )}
               {candidate.interview_status && (
@@ -676,6 +686,8 @@ export default function Admin() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [recruiterFilter, setRecruiterFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   const [selectedCandidate, setSelectedCandidate] = useState<AdminEvaluation | null>(null);
 
   const { evaluations, loading, error, refetch } = useAdmin(authenticated);
@@ -695,11 +707,37 @@ export default function Admin() {
     setSelectedCandidate(prev => prev ? { ...prev, ...updated } : prev);
   }, [selectedCandidate]);
 
-  // Lista de reclutadores únicos
+  // Lista de reclutadores únicos (normalizados)
   const recruiters = useMemo(() => {
-    const set = new Set(evaluations.map(e => e.assigned_to).filter(Boolean) as string[]);
+    const set = new Set(
+      evaluations
+        .map(e => normalizeRecruiter(e.assigned_to))
+        .filter(Boolean) as string[]
+    );
     return Array.from(set).sort();
   }, [evaluations]);
+
+  // Presets de rango de fechas
+  const applyDatePreset = useCallback((preset: 'today' | 'yesterday' | 'week' | 'month') => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    if (preset === 'today') {
+      const today = fmt(now);
+      setDateFrom(today); setDateTo(today);
+    } else if (preset === 'yesterday') {
+      const y = new Date(now); y.setDate(y.getDate() - 1);
+      const yStr = fmt(y);
+      setDateFrom(yStr); setDateTo(yStr);
+    } else if (preset === 'week') {
+      const start = new Date(now); start.setDate(now.getDate() - 6);
+      setDateFrom(fmt(start)); setDateTo(fmt(now));
+    } else if (preset === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      setDateFrom(fmt(start)); setDateTo(fmt(now));
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     return evaluations.filter(e => {
@@ -708,10 +746,25 @@ export default function Admin() {
         e.phone.includes(search) ||
         (e.email || '').toLowerCase().includes(search.toLowerCase());
       const matchesStatus    = statusFilter === 'all' || e.status === statusFilter;
-      const matchesRecruiter = recruiterFilter === 'all' || e.assigned_to === recruiterFilter;
-      return matchesSearch && matchesStatus && matchesRecruiter;
+      const matchesRecruiter = recruiterFilter === 'all' || normalizeRecruiter(e.assigned_to) === recruiterFilter;
+
+      let matchesDate = true;
+      if (dateFrom || dateTo) {
+        const evDate = new Date(e.created_at);
+        evDate.setHours(0, 0, 0, 0);
+        if (dateFrom) {
+          const from = new Date(dateFrom + 'T00:00:00');
+          if (evDate < from) matchesDate = false;
+        }
+        if (dateTo && matchesDate) {
+          const to = new Date(dateTo + 'T23:59:59');
+          if (evDate > to) matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesRecruiter && matchesDate;
     });
-  }, [evaluations, search, statusFilter, recruiterFilter]);
+  }, [evaluations, search, statusFilter, recruiterFilter, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     const completed   = evaluations.filter(e => e.status !== 'en_progreso');
@@ -787,37 +840,82 @@ export default function Admin() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nombre, teléfono o email..."
-              className="w-full bg-input border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-          </div>
-          <div className="relative">
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-              className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
-              <option value="all">Todos los estados</option>
-              <option value="elite">Elite</option>
-              <option value="calificado">Calificado</option>
-              <option value="potencial">Potencial</option>
-              <option value="descartado">Descartado</option>
-              <option value="en_progreso">En progreso</option>
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
-          {recruiters.length > 0 && (
+        <div className="space-y-3">
+          {/* Fila 1: búsqueda + estado + reclutador */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text" value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por nombre, teléfono o email..."
+                className="w-full bg-input border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              />
+            </div>
             <div className="relative">
-              <select value={recruiterFilter} onChange={e => setRecruiterFilter(e.target.value)}
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
                 className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
-                <option value="all">Todos los reclutadores</option>
-                {recruiters.map(r => <option key={r} value={r}>{r}</option>)}
+                <option value="all">Todos los estados</option>
+                <option value="elite">Elite</option>
+                <option value="calificado">Calificado</option>
+                <option value="potencial">Potencial</option>
+                <option value="descartado">Descartado</option>
+                <option value="en_progreso">En progreso</option>
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
-          )}
+            {recruiters.length > 0 && (
+              <div className="relative">
+                <select value={recruiterFilter} onChange={e => setRecruiterFilter(e.target.value)}
+                  className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
+                  <option value="all">Todos los reclutadores</option>
+                  {recruiters.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
+            )}
+          </div>
+
+          {/* Fila 2: filtro por fecha */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Presets rápidos */}
+            {[
+              { label: 'Hoy',         preset: 'today'     as const },
+              { label: 'Ayer',        preset: 'yesterday' as const },
+              { label: 'Esta semana', preset: 'week'      as const },
+              { label: 'Este mes',    preset: 'month'     as const },
+            ].map(({ label, preset }) => (
+              <button key={preset} onClick={() => applyDatePreset(preset)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-border bg-input hover:border-primary/50 hover:text-primary text-muted-foreground transition-all">
+                {label}
+              </button>
+            ))}
+
+            <span className="text-muted-foreground/40 text-xs">|</span>
+
+            {/* Desde */}
+            <div className="relative flex items-center gap-1.5">
+              <Calendar size={13} className="text-muted-foreground" />
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                className="bg-input border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              />
+            </div>
+
+            <span className="text-muted-foreground/40 text-xs">→</span>
+
+            {/* Hasta */}
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              className="bg-input border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            />
+
+            {/* Limpiar fechas */}
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/10">
+                <X size={12} />
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Table */}
@@ -868,7 +966,7 @@ export default function Admin() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
-                            {ev.assigned_to || <span className="text-muted-foreground/40">—</span>}
+                            {normalizeRecruiter(ev.assigned_to) || <span className="text-muted-foreground/40">—</span>}
                           </td>
                           <td className="px-4 py-3 text-xs">
                             {intCfg
@@ -876,7 +974,10 @@ export default function Admin() {
                               : <span className="text-muted-foreground/40">—</span>}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
-                            {new Date(ev.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' })}
+                            <div>{new Date(ev.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
+                            <div className="text-muted-foreground/50 text-[10px]">
+                              {new Date(ev.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-primary text-xs opacity-0 group-hover:opacity-100 transition-opacity">Ver →</span>
