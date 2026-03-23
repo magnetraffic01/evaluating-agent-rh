@@ -60,13 +60,13 @@ Deno.serve(async (req: Request) => {
   const interviewDate = body.calendar?.startTime || body.interview_date || body.customData?.interview_date || null;
 
   const rawAssignedTo = (body.assigned_to || body.customData?.assigned_to || '') as string;
-  // Intentar resolver: primero objeto user (si viene), luego mapa por nombre/email/ID
-  const resolved = resolveRecruiter(body.user)
+  // Intentar resolver: objeto user → mapa por nombre/email/ID → raw string → fallback
+  // Fallback a 'Reclutador 1' porque PRESENTACION CLOSER solo tiene un reclutador activo.
+  // Cuando se active Reclutador 2, este fallback debe eliminarse o hacerse más específico.
+  const assignedTo = resolveRecruiter(body.user)
     || RECRUITER_MAP[rawAssignedTo.trim().toLowerCase()]
-    || (rawAssignedTo.trim() ? rawAssignedTo.trim() : null);
-
-  // Si no se resuelve el reclutador, NO sobreescribir el valor existente en DB
-  const assignedTo = resolved;
+    || (rawAssignedTo.trim() ? rawAssignedTo.trim() : null)
+    || 'Reclutador 1';
 
   console.log('[parsed]', { rawPhone, interviewDate, rawAssignedTo, assignedTo });
 
