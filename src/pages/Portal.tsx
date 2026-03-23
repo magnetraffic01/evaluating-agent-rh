@@ -474,7 +474,6 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
                       {([
                         ['Nombre',   profile.name],
                         ['Label',    profile.label],
-                        ['Peso (%)', `${profile.weight}%`],
                         ['Asignados totales', String(profile.total_assigned)],
                       ] as [string, string][]).map(([label, value]) => (
                         <div key={label}>
