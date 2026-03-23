@@ -11,6 +11,7 @@ import Result from "./pages/Result";
 import Admin from "./pages/Admin";
 import Expired from "./pages/Expired";
 import NotFound from "./pages/NotFound";
+import Portal from "./pages/Portal";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/evaluate" element={<Evaluate />} />
               <Route path="/result/:sessionId" element={<Result />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/portal" element={<Portal />} />
               <Route path="/expired" element={<Expired />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -25,3 +25,12 @@ export const supabaseAdmin = createClient(
   supabaseServiceKey || supabaseAnonKey,
   authConfig,
 );
+
+// Cliente auth — para el portal de reclutador (con persistencia de sesión)
+export const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  },
+});

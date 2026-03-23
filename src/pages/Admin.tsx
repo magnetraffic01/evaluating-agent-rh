@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
 import { useAdmin, AdminEvaluation, updateInterviewData } from '@/hooks/useAdmin';
-import { supabase as supabaseAdmin } from '@/lib/supabase';
+import { supabase as supabaseAnon, supabaseAdmin } from '@/lib/supabase';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -616,6 +616,285 @@ function DetailModal({ candidate, onClose, onUpdate }: {
   );
 }
 
+// ─── RecruiterPanel ───────────────────────────────────────────────────────────
+
+interface Recruiter {
+  id: string;
+  name: string;
+  label: string;
+  calendar_url: string;
+  weight: number;
+  active: boolean;
+  total_assigned: number;
+}
+
+function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAdmin }) {
+  const [recruiters, setRecruiters] = useState<Recruiter[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<Recruiter>>({});
+  const [saving, setSaving] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newRecruiter, setNewRecruiter] = useState({ name: '', label: '', calendar_url: '', weight: 0 });
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const fetchRecruiters = async () => {
+    setLoading(true);
+    setError(null);
+    const { data, error: fetchError } = await supabaseClient
+      .from('recruiters')
+      .select('*')
+      .order('label');
+    if (fetchError) {
+      setError(fetchError.message);
+    } else {
+      setRecruiters(data || []);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchRecruiters(); }, []);
+
+  const totalAssigned = recruiters.reduce((s, r) => s + (r.total_assigned || 0), 0);
+  const activeWeightSum = recruiters.filter(r => r.active).reduce((s, r) => s + (r.weight || 0), 0);
+
+  const startEdit = (r: Recruiter) => {
+    setEditingId(r.id);
+    setEditDraft({ name: r.name, calendar_url: r.calendar_url, weight: r.weight });
+  };
+
+  const cancelEdit = () => { setEditingId(null); setEditDraft({}); };
+
+  const saveEdit = async (id: string) => {
+    setSaving(true);
+    const { error: upErr } = await supabaseClient
+      .from('recruiters')
+      .update({ name: editDraft.name, calendar_url: editDraft.calendar_url, weight: editDraft.weight })
+      .eq('id', id);
+    if (upErr) {
+      setError(upErr.message);
+    } else {
+      setRecruiters(prev => prev.map(r => r.id === id ? { ...r, ...editDraft } : r));
+      setEditingId(null);
+      setEditDraft({});
+    }
+    setSaving(false);
+  };
+
+  const toggleActive = async (r: Recruiter) => {
+    const { error: upErr } = await supabaseClient
+      .from('recruiters')
+      .update({ active: !r.active })
+      .eq('id', r.id);
+    if (!upErr) {
+      setRecruiters(prev => prev.map(x => x.id === r.id ? { ...x, active: !x.active } : x));
+    }
+  };
+
+  const handleAdd = async () => {
+    setAddError(null);
+    if (!newRecruiter.name || !newRecruiter.label || !newRecruiter.calendar_url) {
+      setAddError('Nombre, label y URL del calendario son requeridos.');
+      return;
+    }
+    const { error: insErr } = await supabaseClient
+      .from('recruiters')
+      .insert({ ...newRecruiter, active: false, total_assigned: 0 });
+    if (insErr) {
+      setAddError(insErr.message);
+    } else {
+      setShowAddForm(false);
+      setNewRecruiter({ name: '', label: '', calendar_url: '', weight: 0 });
+      fetchRecruiters();
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive">
+          <AlertCircle size={16} />{error}
+        </div>
+      )}
+
+      {/* Resumen de pesos */}
+      <div className="glass-card rounded-xl p-4 flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Suma de pesos activos:</span>
+        <span className={`font-bold ${activeWeightSum > 100 ? 'text-destructive' : 'text-primary'}`}>
+          {activeWeightSum} / 100
+          {activeWeightSum > 100 && <span className="ml-2 text-xs text-destructive">(¡supera 100%!)</span>}
+        </span>
+      </div>
+
+      {/* Tabla de reclutadores */}
+      <div className="glass-card rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/60">
+                {['Nombre', 'Label', 'Calendario', 'Peso %', 'Total Asig.', '% Real', 'Estado', 'Distribución', 'Acciones'].map(h => (
+                  <th key={h} className="text-left text-muted-foreground font-medium px-4 py-3 text-xs uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {recruiters.map(r => {
+                const realPct = totalAssigned > 0 ? Math.round((r.total_assigned / totalAssigned) * 100) : 0;
+                const barWidth = totalAssigned > 0 ? (r.total_assigned / totalAssigned) * 100 : 0;
+                const isEditing = editingId === r.id;
+                return (
+                  <tr key={r.id} className="border-b border-border/40 hover:bg-primary/5 transition-colors">
+                    <td className="px-4 py-3">
+                      {isEditing
+                        ? <input value={editDraft.name || ''} onChange={e => setEditDraft(p => ({ ...p, name: e.target.value }))}
+                            className="w-full bg-input border border-border rounded-lg px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        : <span className="text-foreground font-medium">{r.name}</span>}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{r.label}</td>
+                    <td className="px-4 py-3 max-w-[180px]">
+                      {isEditing
+                        ? <input value={editDraft.calendar_url || ''} onChange={e => setEditDraft(p => ({ ...p, calendar_url: e.target.value }))}
+                            className="w-full bg-input border border-border rounded-lg px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        : <span className="text-muted-foreground text-xs truncate block max-w-[180px]" title={r.calendar_url}>
+                            {r.calendar_url ? r.calendar_url.replace(/^https?:\/\//, '').slice(0, 30) + (r.calendar_url.length > 35 ? '…' : '') : '—'}
+                          </span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isEditing
+                        ? <input type="number" min={0} max={100} value={editDraft.weight ?? 0} onChange={e => setEditDraft(p => ({ ...p, weight: Number(e.target.value) }))}
+                            className="w-16 bg-input border border-border rounded-lg px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        : <span className="text-foreground">{r.weight}%</span>}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.total_assigned}</td>
+                    <td className="px-4 py-3">
+                      <span className={`font-semibold ${realPct > (r.weight || 0) ? 'text-warning' : 'text-success'}`}>{realPct}%</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => toggleActive(r)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                          r.active
+                            ? 'bg-success/15 text-success border-success/40 hover:bg-success/25'
+                            : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                        }`}>
+                        {r.active ? 'Activo' : 'Inactivo'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 min-w-[120px]">
+                      {/* Barra de distribución */}
+                      <div className="relative h-3 bg-muted/40 rounded-full overflow-hidden w-full">
+                        <div
+                          className="h-full bg-primary/40 rounded-full transition-all"
+                          style={{ width: `${Math.min(barWidth, 100)}%` }}
+                        />
+                        {/* Marca de cuota esperada */}
+                        {r.weight > 0 && (
+                          <div
+                            className="absolute top-0 h-full w-0.5 bg-primary"
+                            style={{ left: `${Math.min(r.weight, 100)}%` }}
+                            title={`Cuota: ${r.weight}%`}
+                          />
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground/60 mt-0.5">{realPct}% real · {r.weight}% cuota</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => saveEdit(r.id)} disabled={saving}
+                            className="px-2.5 py-1 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-all disabled:opacity-50">
+                            {saving ? '...' : 'Guardar'}
+                          </button>
+                          <button onClick={cancelEdit}
+                            className="px-2.5 py-1 rounded-lg bg-muted text-muted-foreground text-xs hover:bg-muted/70 transition-all">
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => startEdit(r)}
+                          className="px-2.5 py-1 rounded-lg bg-muted text-muted-foreground text-xs hover:border-primary/50 hover:text-primary border border-border transition-all">
+                          Editar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {recruiters.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground text-sm">
+                    No hay reclutadores configurados aún.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Botón agregar */}
+      <div>
+        {!showAddForm ? (
+          <button onClick={() => setShowAddForm(true)}
+            className="shimmer-btn gold-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-full text-sm transition-all hover:opacity-90 active:scale-[0.98]">
+            + Agregar reclutador
+          </button>
+        ) : (
+          <div className="glass-card rounded-xl p-5 space-y-4">
+            <h4 className="text-foreground font-semibold text-sm">Nuevo reclutador</h4>
+            {addError && (
+              <p className="text-destructive text-xs flex items-center gap-1"><AlertCircle size={12} />{addError}</p>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Nombre</label>
+                <input value={newRecruiter.name} onChange={e => setNewRecruiter(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Ej: María González"
+                  className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Label</label>
+                <input value={newRecruiter.label} onChange={e => setNewRecruiter(p => ({ ...p, label: e.target.value }))}
+                  placeholder="Ej: Reclutador 3"
+                  className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-muted-foreground mb-1 block">URL del calendario</label>
+                <input value={newRecruiter.calendar_url} onChange={e => setNewRecruiter(p => ({ ...p, calendar_url: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Peso %</label>
+                <input type="number" min={0} max={100} value={newRecruiter.weight} onChange={e => setNewRecruiter(p => ({ ...p, weight: Number(e.target.value) }))}
+                  className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleAdd}
+                className="shimmer-btn gold-gradient text-primary-foreground font-semibold px-5 py-2 rounded-full text-sm transition-all hover:opacity-90">
+                Guardar
+              </button>
+              <button onClick={() => { setShowAddForm(false); setAddError(null); }}
+                className="px-5 py-2 rounded-full text-sm text-muted-foreground hover:text-foreground border border-border hover:border-border/70 transition-all">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -683,6 +962,7 @@ export default function Admin() {
   const [authenticated, setAuthenticated] = useState(() =>
     sessionStorage.getItem('admin_auth') === 'true'
   );
+  const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores'>('candidatos');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [recruiterFilter, setRecruiterFilter] = useState<string>('all');
@@ -807,6 +1087,26 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 print:hidden">
+
+        {/* Tab switcher */}
+        <div className="flex gap-2 border-b border-border pb-0">
+          {(['candidatos', 'reclutadores'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-5 py-2.5 text-sm font-medium capitalize transition-all border-b-2 -mb-px ${
+                activeTab === tab
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}>
+              {tab === 'candidatos' ? 'Candidatos' : 'Reclutadores'}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'reclutadores' && (
+          <RecruiterPanel supabaseClient={supabaseAdmin} />
+        )}
+
+        {activeTab === 'candidatos' && (<>
 
         {error && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -1005,6 +1305,8 @@ export default function Admin() {
         <p className="text-center text-xs text-muted-foreground/40 pb-4">
           {filtered.length} de {evaluations.length} evaluaciones · Magnetraffic HR
         </p>
+
+        </>)}
       </main>
 
       {/* Modal */}
