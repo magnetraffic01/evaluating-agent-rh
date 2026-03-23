@@ -15,6 +15,7 @@ import {
 } from '@/utils/scoring';
 import { syncToSupabase, completeInSupabase } from '@/hooks/useSession';
 import { sendWebhook } from '@/lib/webhook';
+import { assignRecruiter } from '@/lib/recruiters';
 
 const TOTAL_VISIBLE_STEPS = 12;
 const SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutos
@@ -219,6 +220,15 @@ export default function Evaluate() {
         updated.totalScore = calculateTotalScore(updated);
         updated.status = calculateFinalStatus(updated);
         updated.completedAt = new Date().toISOString();
+
+        // Asignar reclutador si el candidato calificó
+        if (updated.status === 'elite' || updated.status === 'calificado') {
+          const assignment = await assignRecruiter();
+          if (assignment) {
+            updated.assignedTo  = assignment.label;
+            updated.calendarUrl = assignment.calendar_url;
+          }
+        }
 
         saveLocal(updated);
         saveCompleted(updated);

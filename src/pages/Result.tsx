@@ -5,8 +5,7 @@ import MagnetLogo from '@/components/MagnetLogo';
 import { EvaluationState } from '@/types/evaluation';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const CALENDAR_ELITE = import.meta.env.VITE_CALENDAR_ELITE || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
-const CALENDAR_STD   = import.meta.env.VITE_CALENDAR_STD   || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
+const CALENDAR_FALLBACK = 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
 
 // ─── Particle burst para Elite ────────────────────────────────────────────────
 
@@ -57,7 +56,7 @@ function RevealText({ children, delay = 0, className = '' }: { children: React.R
 
 // ─── Result layouts ───────────────────────────────────────────────────────────
 
-function EliteResult({ name }: { name: string }) {
+function EliteResult({ name, calendarUrl }: { name: string; calendarUrl: string }) {
   const { t } = useLanguage();
   return (
     <div className="text-center space-y-6">
@@ -98,7 +97,7 @@ function EliteResult({ name }: { name: string }) {
             {t('result_elite_next_desc')}
           </p>
           <a
-            href={CALENDAR_ELITE}
+            href={calendarUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="shimmer-btn inline-block gold-gradient text-primary-foreground font-bold py-4 px-8 rounded-full text-base transition-all hover:opacity-90 active:scale-[0.98] animate-pulse-gold"
@@ -111,7 +110,7 @@ function EliteResult({ name }: { name: string }) {
   );
 }
 
-function CalificadoResult({ name }: { name: string }) {
+function CalificadoResult({ name, calendarUrl }: { name: string; calendarUrl: string }) {
   const { t } = useLanguage();
   return (
     <div className="text-center space-y-6">
@@ -147,7 +146,7 @@ function CalificadoResult({ name }: { name: string }) {
             {t('result_calificado_card_desc')}
           </p>
           <a
-            href={CALENDAR_STD}
+            href={calendarUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="shimmer-btn inline-block bg-success text-white font-bold py-4 px-8 rounded-full text-base transition-all hover:opacity-90 active:scale-[0.98]"
@@ -253,9 +252,9 @@ export default function Result() {
   const renderResult = () => {
     switch (state.status) {
       case 'elite':
-        return <EliteResult name={state.name} />;
+        return <EliteResult name={state.name} calendarUrl={state.calendarUrl || CALENDAR_FALLBACK} />;
       case 'calificado':
-        return <CalificadoResult name={state.name} />;
+        return <CalificadoResult name={state.name} calendarUrl={state.calendarUrl || CALENDAR_FALLBACK} />;
       case 'potencial':
         return <PotencialResult name={state.name} phone={state.phone} />;
       default:

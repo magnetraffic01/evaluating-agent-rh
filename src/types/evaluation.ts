@@ -29,6 +29,7 @@ export interface EvaluationState {
   cvUrl: string;
   linkedinUrl: string;
   assignedTo: string;
+  calendarUrl: string;
 
   // Scoring
   scores: ScoreBreakdown;
@@ -101,6 +102,7 @@ export function createInitialState(name: string, phone: string): EvaluationState
     cvUrl: '',
     linkedinUrl: '',
     assignedTo: '',
+    calendarUrl: '',
     scores: {
       E1_cierre: 0,
       E1_volumen: 0,
