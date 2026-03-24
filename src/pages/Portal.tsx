@@ -228,19 +228,24 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
     setLoading(true);
     setError(null);
 
-    const [profileRes, evalsRes] = await Promise.all([
-      supabaseAuth.from('recruiters').select('*').single(),
-      supabaseAuth
-        .from('evaluations')
-        .select('session_id, name, phone, location, score_total, status, assigned_to, interview_status, interview_date, created_at, completed_at, email, recruiter_notes')
-        .order('created_at', { ascending: false }),
-    ]);
+    // Obtener perfil primero para saber el label del reclutador
+    const profileRes = await supabaseAuth.from('recruiters').select('*').single();
 
     if (profileRes.error) {
       setError('No se encontró perfil de reclutador asociado a esta cuenta.');
-    } else {
-      setProfile(profileRes.data as RecruiterProfile);
+      setLoading(false);
+      return;
     }
+
+    const recruiterProfile = profileRes.data as RecruiterProfile;
+    setProfile(recruiterProfile);
+
+    // Filtrar evaluaciones por assigned_to = label del reclutador autenticado
+    const evalsRes = await supabaseAuth
+      .from('evaluations')
+      .select('session_id, name, phone, location, score_total, status, assigned_to, interview_status, interview_date, created_at, completed_at, email, recruiter_notes')
+      .eq('assigned_to', recruiterProfile.label)
+      .order('created_at', { ascending: false });
 
     if (!evalsRes.error) {
       setEvaluations((evalsRes.data || []) as PortalEvaluation[]);
