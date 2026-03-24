@@ -7,7 +7,7 @@ import { supabase as supabaseAnon, supabaseAdmin } from '@/lib/supabase';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'Info2026$';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'Info2030#!';
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
   elite:       { label: 'ELITE',       className: 'bg-primary/15 text-primary border-primary/40',             dot: 'bg-primary'          },
