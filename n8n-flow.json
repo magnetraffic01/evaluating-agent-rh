@@ -1,0 +1,505 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "magtrrhh-01",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1008, 1056],
+      "id": "3fb535b5-f704-47a3-a672-2047ecb37c2a",
+      "webhookId": "1226bbcf-7b9b-43ff-a8dd-396730f4564c"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.body.message.body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "¿Tiene mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-720, 1056],
+      "id": "ae9183f4-70fc-4bc7-b9ef-fe7296b64526"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pre-Proceso v6: lee custom fields por ID real de GHL\n// IDs descubiertos manualmente:\n// Score = UYsnUGzSppmFWJcVFcz6\n// Bloque Actual = koxarQF3nqPVH2imJj0R\n// Resultado = OyWo0TP2py4acLQGhKPk\n\nconst FIELD_IDS = {\n  score: 'UYsnUGzSppmFWJcVFcz6',\n  bloque_actual: 'koxarQF3nqPVH2imJj0R',\n  resultado: 'OyWo0TP2py4acLQGhKPk'\n};\n\nfor (const item of $input.all()) {\n  const wb = $('Webhook').item.json.body || {};\n\n  let ghlContact = {};\n  try {\n    ghlContact = $('GHL — Get Contact').item.json.contact || $('GHL — Get Contact').item.json || {};\n  } catch(e) {\n    ghlContact = {};\n  }\n\n  // Extraer custom fields por ID\n  const cf = {};\n  if (ghlContact.customFields && Array.isArray(ghlContact.customFields)) {\n    for (const field of ghlContact.customFields) {\n      cf[field.id] = field.value || field.field_value || '';\n    }\n  }\n\n  // Leer valores usando IDs reales\n  const scoreAnterior   = parseInt(cf[FIELD_IDS.score] || 0, 10);\n  const bloqueAnterior  = cf[FIELD_IDS.bloque_actual] || \"0B\";\n  const resultadoAnterior = (cf[FIELD_IDS.resultado] || \"\").toLowerCase();\n\n  // Calcular tiempo desde último update (DEBE ir antes de usarlo)\n  const dateUpdated = ghlContact.dateUpdated || \"\";\n  const minutosDesdeUpdate = dateUpdated\n    ? (Date.now() - new Date(dateUpdated).getTime()) / 60000\n    : 999;\n\n  // Detectar reingreso (solo si pasaron más de 5 minutos)\n  const procesoTerminado = [\"descartado\", \"élite\", \"elite\", \"calificado\", \"potencial\"].includes(resultadoAnterior);\n  const esReingreso = procesoTerminado && minutosDesdeUpdate > 5;\n\n  // Calcular horas de abandono\n  const ctxAbandonoHoras = dateUpdated\n    ? Math.round((Date.now() - new Date(dateUpdated).getTime()) / 3600000)\n    : 0;\n\n  // Exportar\n  item.json.ctx_score_acumulado    = esReingreso ? 0 : scoreAnterior;\n  item.json.ctx_current_block      = esReingreso ? \"0B\" : (bloqueAnterior || \"0B\");\n  item.json.ctx_abandono_horas     = ctxAbandonoHoras;\n  item.json.ctx_es_reingreso       = esReingreso;\n  item.json.ctx_turn_count         = 0;\n  item.json.ctx_mensaje            = wb.message?.body || \"\";\n  item.json.ctx_first_name         = wb.first_name || ghlContact.firstName || \"\";\n  item.json.ctx_last_name          = wb.last_name || ghlContact.lastName || \"\";\n  item.json.ctx_contact_id         = wb.contact_id || \"\";\n  item.json.ctx_phone              = wb.phone || ghlContact.phone || \"\";\n}\nreturn $input.all();"
+      },
+      "name": "Pre-Proceso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-288, 1040],
+      "id": "fd057f07-57cc-456a-a8fe-15a4e110755d"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=CONTEXTO_SISTEMA:\nscore_acumulado: {{ $('Pre-Proceso').item.json.ctx_score_acumulado }}\ncurrent_block: {{ $('Pre-Proceso').item.json.ctx_current_block }}\nturn_count: {{ $('Pre-Proceso').item.json.ctx_turn_count }}\nabandono_horas: {{ $('Pre-Proceso').item.json.ctx_abandono_horas }}\nnombre_webhook: {{ $('Pre-Proceso').item.json.ctx_first_name }}\nes_reingreso: {{ $('Pre-Proceso').item.json.ctx_es_reingreso }}\n---\nMENSAJE_CANDIDATO:\n{{ $('Pre-Proceso').item.json.ctx_mensaje }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=╔══════════════════════════════════════════════════════════════╗\n║  ALEX — PRE-FILTRO v1.0 | MAGNETRAFFIC                      ║\n║  Objetivo: 3 turnos máx — filtrar y enviar link             ║\n╚══════════════════════════════════════════════════════════════╝\n\n[CONFIG]\nEMPRESA:  Magnetraffic × TreboLife\nPRODUCTO: Membresías de salud para hispanos en EE.UU.\nPERFIL:   Closer remoto telefónico/video — LATAM + España\n\n=== IDENTIDAD ===\nEres Alex, Coordinador Senior de Talento Comercial.\nDirecto, cercano, español neutro latinoamericano. Mensajes cortos — WhatsApp real.\nNo eres bot.\n\n=== REGLAS ABSOLUTAS ===\nR1. JSON puro. Empieza con { y termina con }. SIN markdown ni texto fuera.\nR2. UNA pregunta por turno. Máximo 2 mensajes.\nR3. NUNCA reveles qué evalúas.\nR4. Evasiva 3 veces consecutivas → descarte.\n\n=== OUTPUT JSON — ESTRUCTURA EXACTA ===\n{\n  \"replies\": [\"mensaje 1\", \"mensaje 2 opcional\"],\n  \"current_block\": \"0B\",\n  \"flags\": {\n    \"consintio_proceso\": false,\n    \"sin_ventas_telefonicas\": false\n  },\n  \"candidate_data\": {\n    \"first_name\": null,\n    \"last_name\": null,\n    \"location\": null\n  },\n  \"status\": \"en_progreso\",\n  \"disqualify_reason\": null\n}\n\nValores status:        en_progreso | pre_calificado | descartado\nValores current_block: 0B | F1 | F2 | FIN\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nBLOQUES — MÁXIMO 3 TURNOS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n0B | APERTURA (turno 1)\n\"Hola, soy Alex de MagenTraffic 👋\nVeo que te interesó la oportunidad de closer remoto para el mercado hispano en EE.UU.\nTengo dos preguntas rápidas antes de enviarte el proceso de evaluación. ¿Arrancamos?\"\nNo → descarte \"No consintió el proceso\"\nSí → flags.consintio_proceso = true → F1\n\nF1 | UBICACIÓN + DISPONIBILIDAD (turno 2)\n\"¿Desde qué país me escribes y tienes disponibilidad para trabajar full time (mínimo 30h/sem)?\"\nCaptura: first_name (si lo menciona), last_name, location.\nFuera de LATAM+España → descarte \"Ubicación fuera de territorio válido\"\n< 30h/sem → descarte \"Disponibilidad insuficiente\"\n→ F2\n\nF2 | FILTRO TELEFÓNICO (turno 3)\n\"¿Tienes experiencia en ventas por teléfono o video donde tú cerrabas y cobrabas la venta?\"\nSin experiencia telefónica → descarte \"Sin experiencia en ventas telefónicas\", sin_ventas_telefonicas = true\nSin experiencia comercial  → descarte \"Sin experiencia en ventas\"\n→ PRE_CALIFICADO\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nFIN | RESULTADO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nPRE_CALIFICADO:\nstatus = \"pre_calificado\"\n\"[NOMBRE], perfecto — tienes el perfil base que buscamos. 🎯\nEl siguiente paso es una evaluación estructurada de ~15 minutos que hacemos online.\nCuando estés en un lugar tranquilo y sin interrupciones, entra aquí:\n[APP_LINK]\"\n\"Tómate tu tiempo, pero hazlo hoy — los cupos son limitados. Cualquier duda aquí estoy.\"\n\nDESCARTADO:\nstatus = \"descartado\"\nMsg1: \"Gracias por tu tiempo, [NOMBRE]. En este momento lo que buscamos requiere [paráfrasis de disqualify_reason].\"\nMsg2: \"No significa que no tengas potencial — significa que el match con este proyecto no está dado hoy. Éxitos. 🙌\"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nFIN — ALEX PRE-FILTRO v1.0\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        }
+      },
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [496, 1040],
+      "id": "a746cc79-6e13-44ce-a74b-668133f39c3e"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [272, 1280],
+      "id": "aec1f305-8292-4fc1-81b7-ef0a271b60b3",
+      "credentials": {
+        "openAiApi": {
+          "id": "W9emvij1Nanqvkx1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.contact_id }}",
+        "tableName": "n8n_chat_magnetraffic_rrhh"
+      },
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [640, 1280],
+      "id": "b1624d6e-cbeb-4cf3-bd93-f69657c77faf",
+      "credentials": {
+        "postgres": {
+          "id": "5v9dCz39guFGW9ns",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  let aiData = {};\n\n  // Parseo del output del AI Agent\n  try {\n    const rawOutput = item.json.output || item.json.text || \"\";\n    let clean = rawOutput.replace(/```json/g, '').replace(/```/g, '').trim();\n    const match = clean.match(/\\{[\\s\\S]*\\}/);\n    if (match) aiData = JSON.parse(match[0]);\n  } catch (e) {\n    item.json.parse_error = true;\n  }\n\n  const cd = aiData.candidate_data || {};\n  const wb = $('Webhook').item.json.body || {};\n\n  const firstName = cd.first_name || wb.first_name || \"\";\n  const lastName  = cd.last_name  || wb.last_name  || \"\";\n  const phone     = wb.phone || \"\";\n  const aiStatus  = (aiData.status || \"en_progreso\").toLowerCase();\n\n  // Construir link de la app con nombre y teléfono\n  const appLink = `https://rrhh.magnetraffic.com/evaluate?name=${encodeURIComponent((firstName + ' ' + lastName).trim())}&phone=${encodeURIComponent(phone)}`;\n\n  // Reemplazar [APP_LINK] y [NOMBRE] en los mensajes\n  const candidateName = firstName || \"Hola\";\n\n  item.json.ai_reply_1 = (aiData.replies?.[0] || \"\")\n    .replace(/\\[NOMBRE\\]/g, candidateName)\n    .replace(/\\[APP_LINK\\]/g, appLink);\n\n  item.json.ai_reply_2 = (aiData.replies?.[1] || \"\")\n    .replace(/\\[NOMBRE\\]/g, candidateName)\n    .replace(/\\[APP_LINK\\]/g, appLink);\n\n  item.json.ai_status     = aiStatus;\n  item.json.current_block = aiData.current_block || \"0B\";\n  item.json.ghl_first_name = firstName;\n  item.json.ghl_last_name  = lastName;\n\n  // Body para actualizar GHL\n  const updateBody = {\n    customFields: [\n      { id: 'koxarQF3nqPVH2imJj0R', field_value: aiData.current_block || \"0B\" },\n      {\n        id: 'OyWo0TP2py4acLQGhKPk',\n        field_value: aiStatus === 'pre_calificado' ? 'Pre-calificado' :\n                     aiStatus === 'descartado'     ? 'Descartado'     : 'En Proceso'\n      }\n    ]\n  };\n\n  if (firstName) updateBody.firstName = firstName;\n  if (lastName)  updateBody.lastName  = lastName;\n\n  item.json.ghl_update_body = JSON.stringify(updateBody);\n}\n\nreturn $input.all();"
+      },
+      "name": "Code in JavaScript",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [816, 1040],
+      "id": "d6cf7a68-0f4e-4c52-9a35-c23e02b6f3cf"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c-err",
+              "leftValue": "={{ $json.parse_error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "¿Error de parseo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1008, 1040],
+      "id": "726a1fc9-1fac-4d76-acdb-9c22a546b5c7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"WhatsApp\",\n  \"contactId\": \"{{ $('Webhook').item.json.body.contact_id }}\",\n  \"message\": \"Tuve un problema técnico. Escribe 'Hola' para continuar tu evaluación.\"\n}",
+        "options": {}
+      },
+      "name": "WhatsApp — Error Fallback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1248, 896],
+      "id": "d6717dc1-62a0-465a-9439-198a4342873d",
+      "credentials": {
+        "httpHeaderAuth": { "id": "RbT6RGTXHbg5raj8", "name": "Header Auth account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c-msg2",
+              "leftValue": "={{ $json.ai_reply_2 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "¿Hay mensaje 2?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1248, 1184],
+      "id": "5a8de66f-4528-44bd-a2c0-c463d6e1f769"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"WhatsApp\",\n  \"contactId\": \"{{ $('Webhook').item.json.body.contact_id }}\",\n  \"message\": {{ JSON.stringify($('Code in JavaScript').item.json.ai_reply_1) }}\n}",
+        "options": {}
+      },
+      "name": "WhatsApp — Msg 1 (de 2)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1504, 1040],
+      "id": "3693b7f5-b9ed-4034-8d22-1abc1ada51c1",
+      "credentials": {
+        "httpHeaderAuth": { "id": "RbT6RGTXHbg5raj8", "name": "Header Auth account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "name": "Esperar 3s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1728, 1040],
+      "id": "94b7f073-587b-44ba-8df1-3e8d6e555899",
+      "webhookId": "927cb087-aa78-4ce8-be38-a9ef1124a72e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"WhatsApp\",\n  \"contactId\": \"{{ $('Webhook').item.json.body.contact_id }}\",\n  \"message\": {{ JSON.stringify($('Code in JavaScript').item.json.ai_reply_2) }}\n}",
+        "options": {}
+      },
+      "name": "WhatsApp — Msg 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1936, 1040],
+      "id": "de8985e5-149c-493a-bac6-ee8a4c417ace",
+      "credentials": {
+        "httpHeaderAuth": { "id": "RbT6RGTXHbg5raj8", "name": "Header Auth account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"WhatsApp\",\n  \"contactId\": \"{{ $('Webhook').item.json.body.contact_id }}\",\n  \"message\": {{ JSON.stringify($('Code in JavaScript').item.json.ai_reply_1) }}\n}",
+        "options": {}
+      },
+      "name": "WhatsApp — Msg 1 (solo)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1504, 1328],
+      "id": "3f61509b-3269-4121-83ea-042aea7fb837",
+      "credentials": {
+        "httpHeaderAuth": { "id": "RbT6RGTXHbg5raj8", "name": "Header Auth account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c-ghl",
+              "leftValue": "={{ $('Code in JavaScript').item.json.current_block }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "¿Actualizar GHL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2176, 1184],
+      "id": "2db9ca9b-ae79-492e-9f34-76890977fb60"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $('Webhook').item.json.body.contact_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Code in JavaScript').item.json.ghl_update_body }}",
+        "options": {}
+      },
+      "name": "GHL — Actualizar Contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2416, 1088],
+      "id": "46b673a9-1bb1-4eb6-9ac5-9660cfb0491a",
+      "credentials": {
+        "httpHeaderAuth": { "id": "RbT6RGTXHbg5raj8", "name": "Header Auth account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $('Webhook').item.json.body.contact_id }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tags\": [\"{{ $('Code in JavaScript').item.json.ai_status }}\", \"magnetraffic-rrhh\", \"trebolife\"]\n}",
+        "options": {}
+      },
+      "name": "GHL — Agregar Tags",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2656, 1088],
+      "id": "65145e48-458a-48ee-9ed1-14957fb33ea7",
+      "credentials": {
+        "httpHeaderAuth": { "id": "RbT6RGTXHbg5raj8", "name": "Header Auth account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c-reset",
+              "leftValue": "={{ $json.ctx_es_reingreso }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Reset Memoria (si reingreso)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-48, 1040],
+      "id": "cab6bc19-7457-4a9d-bbe6-3bdb560c26e5"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=DELETE FROM n8n_chat_magnetraffic_rrhh WHERE session_id = '{{ $('Webhook').item.json.body.contact_id }}'",
+        "options": {}
+      },
+      "name": "Postgres — Limpiar Memoria",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [240, 896],
+      "id": "cd8e7e33-d40f-4be3-881e-d281a3371b6a",
+      "credentials": {
+        "postgres": { "id": "5v9dCz39guFGW9ns", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $('Webhook').item.json.body.contact_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-496, 1040],
+      "id": "a1b2c3d4-ghl-get-contact-001",
+      "name": "GHL — Get Contact",
+      "credentials": {
+        "httpHeaderAuth": { "id": "RbT6RGTXHbg5raj8", "name": "Header Auth account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [464, 1360],
+      "id": "eabb71bc-dccf-4593-87a7-8e0014d9787b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": { "id": "XhRhqlqBMq11fzq1", "name": "Google Gemini(PaLM) Api account" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "¿Tiene mensaje?", "type": "main", "index": 0 }]] },
+    "¿Tiene mensaje?": { "main": [[{ "node": "GHL — Get Contact", "type": "main", "index": 0 }]] },
+    "Pre-Proceso": { "main": [[{ "node": "Reset Memoria (si reingreso)", "type": "main", "index": 0 }]] },
+    "AI Agent": { "main": [[{ "node": "Code in JavaScript", "type": "main", "index": 0 }]] },
+    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Postgres Chat Memory": { "ai_memory": [[{ "node": "AI Agent", "type": "ai_memory", "index": 0 }]] },
+    "Code in JavaScript": { "main": [[{ "node": "¿Error de parseo?", "type": "main", "index": 0 }]] },
+    "¿Error de parseo?": {
+      "main": [
+        [{ "node": "WhatsApp — Error Fallback", "type": "main", "index": 0 }],
+        [{ "node": "¿Hay mensaje 2?", "type": "main", "index": 0 }]
+      ]
+    },
+    "WhatsApp — Error Fallback": { "main": [[{ "node": "¿Actualizar GHL?", "type": "main", "index": 0 }]] },
+    "¿Hay mensaje 2?": {
+      "main": [
+        [{ "node": "WhatsApp — Msg 1 (de 2)", "type": "main", "index": 0 }],
+        [{ "node": "WhatsApp — Msg 1 (solo)", "type": "main", "index": 0 }]
+      ]
+    },
+    "WhatsApp — Msg 1 (de 2)": { "main": [[{ "node": "Esperar 3s", "type": "main", "index": 0 }]] },
+    "Esperar 3s": { "main": [[{ "node": "WhatsApp — Msg 2", "type": "main", "index": 0 }]] },
+    "WhatsApp — Msg 2": { "main": [[{ "node": "¿Actualizar GHL?", "type": "main", "index": 0 }]] },
+    "WhatsApp — Msg 1 (solo)": { "main": [[{ "node": "¿Actualizar GHL?", "type": "main", "index": 0 }]] },
+    "¿Actualizar GHL?": { "main": [[{ "node": "GHL — Actualizar Contacto", "type": "main", "index": 0 }]] },
+    "GHL — Actualizar Contacto": { "main": [[{ "node": "GHL — Agregar Tags", "type": "main", "index": 0 }]] },
+    "Reset Memoria (si reingreso)": {
+      "main": [
+        [{ "node": "Postgres — Limpiar Memoria", "type": "main", "index": 0 }],
+        [{ "node": "AI Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Postgres — Limpiar Memoria": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "GHL — Get Contact": { "main": [[{ "node": "Pre-Proceso", "type": "main", "index": 0 }]] },
+    "Google Gemini Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 1 }]] }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4de3aa5e68c7bc4cb7a327e7e4ddcbdc16841603508e984ae4a1efbfb75da00f"
+  }
+}
