@@ -1218,6 +1218,22 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* Totalizador */}
+        {!loading && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-foreground font-semibold">{filtered.length}</span>
+            <span className="text-muted-foreground">
+              {filtered.length !== evaluations.length ? `de ${evaluations.length} ` : ''}
+              {filtered.length === 1 ? 'evaluación' : 'evaluaciones'}
+            </span>
+            {filtered.length !== evaluations.length && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                filtro activo
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Table */}
         <div className="glass-card rounded-xl overflow-hidden">
           {loading ? (

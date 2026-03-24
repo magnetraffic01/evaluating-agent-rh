@@ -274,10 +274,11 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
   }, [evaluations, search, statusFilter]);
 
   const stats = useMemo(() => ({
-    total:      evaluations.length,
-    agendadas:  evaluations.filter(e => e.interview_status === 'agendada').length,
-    elite:      evaluations.filter(e => e.status === 'elite').length,
+    total:       evaluations.length,
+    agendadas:   evaluations.filter(e => e.interview_status === 'agendada').length,
+    elite:       evaluations.filter(e => e.status === 'elite').length,
     calificados: evaluations.filter(e => e.status === 'calificado').length,
+    potenciales: evaluations.filter(e => e.status === 'potencial').length,
   }), [evaluations]);
 
   const recruiterName = profile?.name || session.user.email || 'Reclutador';
@@ -319,12 +320,13 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: 'Mis Candidatos', value: stats.total,       colorClass: 'text-foreground'  },
-            { label: 'Agendados',      value: stats.agendadas,   colorClass: 'text-primary'     },
-            { label: 'Elite',          value: stats.elite,       colorClass: 'text-success'     },
-            { label: 'Calificados',    value: stats.calificados, colorClass: 'text-warning'     },
+            { label: 'Mis Candidatos', value: stats.total,        colorClass: 'text-foreground'       },
+            { label: 'Agendados',      value: stats.agendadas,    colorClass: 'text-primary'          },
+            { label: 'Elite',          value: stats.elite,        colorClass: 'text-success'          },
+            { label: 'Calificados',    value: stats.calificados,  colorClass: 'text-warning'          },
+            { label: 'Potenciales',    value: stats.potenciales,  colorClass: 'text-muted-foreground' },
           ].map((stat, i) => (
             <motion.div key={stat.label}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
@@ -369,6 +371,22 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
             </button>
           )}
         </div>
+
+        {/* Totalizador */}
+        {!loading && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-foreground font-semibold">{filtered.length}</span>
+            <span className="text-muted-foreground">
+              {filtered.length !== evaluations.length ? `de ${evaluations.length} ` : ''}
+              {filtered.length === 1 ? 'candidato' : 'candidatos'}
+            </span>
+            {filtered.length !== evaluations.length && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                filtro activo
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Tabla */}
         <div className="glass-card rounded-xl overflow-hidden">

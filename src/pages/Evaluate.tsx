@@ -221,8 +221,8 @@ export default function Evaluate() {
         updated.status = calculateFinalStatus(updated);
         updated.completedAt = new Date().toISOString();
 
-        // Asignar reclutador si el candidato calificó
-        if (updated.status === 'elite' || updated.status === 'calificado') {
+        // Asignar reclutador si el candidato calificó o es potencial (para seguimiento manual)
+        if (updated.status === 'elite' || updated.status === 'calificado' || updated.status === 'potencial') {
           const assignment = await assignRecruiter();
           if (assignment) {
             updated.assignedTo  = assignment.label;
