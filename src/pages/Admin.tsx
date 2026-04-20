@@ -1,13 +1,12 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare } from 'lucide-react';
+import type { Session } from '@supabase/supabase-js';
 import MagnetLogo from '@/components/MagnetLogo';
 import { useAdmin, AdminEvaluation, updateInterviewData } from '@/hooks/useAdmin';
-import { supabase as supabaseAnon, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAuth } from '@/lib/supabase';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
-
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'Info2030x';
 
 const STATUS_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
   elite:       { label: 'ELITE',       className: 'bg-primary/15 text-primary border-primary/40',             dot: 'bg-primary'          },
@@ -131,7 +130,7 @@ function CVLinks({ candidate }: { candidate: AdminEvaluation }) {
     if (!raw) return;
     if (isStoragePath(raw)) {
       setLoading(true);
-      supabaseAdmin.storage.from('cvs').createSignedUrl(raw, 60 * 60)
+      supabaseAuth.storage.from('cvs').createSignedUrl(raw, 60 * 60)
         .then(({ data }) => { if (data?.signedUrl) setCvUrl(data.signedUrl); })
         .finally(() => setLoading(false));
     } else {
@@ -628,7 +627,7 @@ interface Recruiter {
   total_assigned: number;
 }
 
-function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAdmin }) {
+function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAuth }) {
   const [recruiters, setRecruiters] = useState<Recruiter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -895,21 +894,37 @@ function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAdm
   );
 }
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+// ─── Login (Supabase Auth) ────────────────────────────────────────────────────
 
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
+function LoginScreen({ onLogin }: { onLogin: (session: Session) => void }) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
-  const [shake, setShake] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    if (password === ADMIN_PASSWORD) {
-      onLogin();
-    } else {
-      setError(true);
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
+  const handleSubmit = async () => {
+    if (!email || !password) {
+      setError('Ingresa tu email y contraseña.');
+      return;
     }
+    setLoading(true);
+    setError(null);
+    const { data, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
+    if (authError || !data.session) {
+      setLoading(false);
+      setError('Credenciales incorrectas.');
+      return;
+    }
+    // Verificar que el usuario esté en la tabla admins
+    const { data: adminRow, error: adminError } = await supabaseAuth
+      .from('admins').select('id').eq('id', data.session.user.id).maybeSingle();
+    setLoading(false);
+    if (adminError || !adminRow) {
+      await supabaseAuth.auth.signOut();
+      setError('Este usuario no tiene acceso de administrador.');
+      return;
+    }
+    onLogin(data.session);
   };
 
   return (
@@ -921,19 +936,27 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className={`glass-card rounded-2xl p-8 max-w-sm w-full relative ${shake ? 'animate-[shake_0.4s_ease]' : ''}`}
+        className="glass-card rounded-2xl p-8 max-w-sm w-full relative"
       >
         <div className="flex justify-center mb-8"><MagnetLogo size="lg" /></div>
         <h2 className="text-foreground font-bold text-xl text-center mb-1">Panel de Administración</h2>
         <p className="text-muted-foreground text-sm text-center mb-8">Acceso restringido · Magnetraffic</p>
         <div className="space-y-3">
           <input
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setError(null); }}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            placeholder="tu@email.com"
+            autoFocus
+            className="w-full bg-input border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+          />
+          <input
             type="password"
             value={password}
-            onChange={e => { setPassword(e.target.value); setError(false); }}
+            onChange={e => { setPassword(e.target.value); setError(null); }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            placeholder="Contraseña de acceso"
-            autoFocus
+            placeholder="Contraseña"
             className={`w-full bg-input border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 transition-all ${
               error ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
             }`}
@@ -941,14 +964,15 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           {error && (
             <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
               className="text-destructive text-xs flex items-center gap-1">
-              <AlertCircle size={12} /> Contraseña incorrecta
+              <AlertCircle size={12} /> {error}
             </motion.p>
           )}
           <button
             onClick={handleSubmit}
-            className="shimmer-btn w-full gold-gradient text-primary-foreground font-semibold py-3 rounded-full transition-all hover:opacity-90 active:scale-[0.98]"
+            disabled={loading}
+            className="shimmer-btn w-full gold-gradient text-primary-foreground font-semibold py-3 rounded-full transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           >
-            Acceder al Panel
+            {loading ? 'Validando...' : 'Acceder al Panel'}
           </button>
         </div>
       </motion.div>
@@ -959,9 +983,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Admin() {
-  const [authenticated, setAuthenticated] = useState(() =>
-    sessionStorage.getItem('admin_auth') === 'true'
-  );
+  const [session, setSession] = useState<Session | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores'>('candidatos');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -970,16 +993,29 @@ export default function Admin() {
   const [dateTo, setDateTo] = useState<string>('');
   const [selectedCandidate, setSelectedCandidate] = useState<AdminEvaluation | null>(null);
 
-  const { evaluations, loading, error, refetch } = useAdmin(authenticated);
+  // Verificar sesión existente al montar
+  useEffect(() => {
+    supabaseAuth.auth.getSession().then(async ({ data }) => {
+      if (!data.session) { setCheckingSession(false); return; }
+      const { data: adminRow } = await supabaseAuth
+        .from('admins').select('id').eq('id', data.session.user.id).maybeSingle();
+      setSession(adminRow ? data.session : null);
+      if (!adminRow) await supabaseAuth.auth.signOut();
+      setCheckingSession(false);
+    });
+    const { data: subscription } = supabaseAuth.auth.onAuthStateChange((_ev, s) => {
+      if (!s) setSession(null);
+    });
+    return () => subscription.subscription.unsubscribe();
+  }, []);
 
-  const handleLogin = () => {
-    sessionStorage.setItem('admin_auth', 'true');
-    setAuthenticated(true);
-  };
+  const { evaluations, loading, error, refetch } = useAdmin(!!session);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('admin_auth');
-    setAuthenticated(false);
+  const handleLogin = (s: Session) => setSession(s);
+
+  const handleLogout = async () => {
+    await supabaseAuth.auth.signOut();
+    setSession(null);
   };
 
   const handleModalUpdate = useCallback((updated: Partial<AdminEvaluation>) => {
@@ -1064,7 +1100,14 @@ export default function Admin() {
     };
   }, [evaluations]);
 
-  if (!authenticated) return <LoginScreen onLogin={handleLogin} />;
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!session) return <LoginScreen onLogin={handleLogin} />;
 
   return (
     <div className="min-h-screen bg-background">
@@ -1103,7 +1146,7 @@ export default function Admin() {
         </div>
 
         {activeTab === 'reclutadores' && (
-          <RecruiterPanel supabaseClient={supabaseAdmin} />
+          <RecruiterPanel supabaseClient={supabaseAuth} />
         )}
 
         {activeTab === 'candidatos' && (<>
