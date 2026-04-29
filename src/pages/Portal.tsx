@@ -5,10 +5,25 @@ import {
   ChevronDown, ExternalLink, User,
 } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
-import { supabaseAuth } from '@/lib/supabase';
-import type { Session } from '@supabase/supabase-js';
+import {
+  auth as apiAuth,
+  evaluations as apiEvaluations,
+  ApiError,
+  type AdminUser,
+  type EvaluationListItem,
+} from '@/lib/api';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
+
+// El backend incluye `label` en el JWT del recruiter. `AdminUser` puede traerlo
+// en el payload — extendemos con campos opcionales.
+interface RecruiterUser extends AdminUser {
+  name?: string;
+  label?: string;
+  calendar_url?: string;
+  weight?: number;
+  total_assigned?: number;
+}
 
 interface RecruiterProfile {
   id: string;
@@ -17,6 +32,10 @@ interface RecruiterProfile {
   calendar_url: string;
   weight: number;
   total_assigned: number;
+}
+
+interface PortalSession {
+  user: RecruiterUser;
 }
 
 interface PortalEvaluation {
@@ -131,7 +150,7 @@ function CandidateModal({ ev, onClose }: { ev: PortalEvaluation; onClose: () => 
 
 // ─── Login screen ─────────────────────────────────────────────────────────────
 
-function PortalLogin({ onLogin }: { onLogin: (session: Session) => void }) {
+function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -144,12 +163,16 @@ function PortalLogin({ onLogin }: { onLogin: (session: Session) => void }) {
     }
     setLoading(true);
     setError(null);
-    const { data, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (authError) {
-      setError('Credenciales incorrectas. Verifica tu email y contraseña.');
-    } else if (data.session) {
-      onLogin(data.session);
+    try {
+      const res = await apiAuth.login(email, password);
+      setLoading(false);
+      onLogin({ user: res.user as RecruiterUser });
+    } catch (e) {
+      setLoading(false);
+      const msg = e instanceof ApiError
+        ? (e.status === 401 ? 'Credenciales incorrectas. Verifica tu email y contraseña.' : (e.message || 'Error al iniciar sesión.'))
+        : 'Error al iniciar sesión.';
+      setError(msg);
     }
   };
 
@@ -213,7 +236,7 @@ function PortalLogin({ onLogin }: { onLogin: (session: Session) => void }) {
 
 // ─── Dashboard del reclutador ─────────────────────────────────────────────────
 
-function PortalDashboard({ session, onLogout }: { session: Session; onLogout: () => void }) {
+function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogout: () => void }) {
   const [profile, setProfile] = useState<RecruiterProfile | null>(null);
   const [evaluations, setEvaluations] = useState<PortalEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,40 +247,59 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
   const [showConfig, setShowConfig] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // El label del reclutador viene en el JWT (campo opcional). Como fallback,
+  // usamos el email — el backend filtra por assigned_to == label.
+  const recruiterLabel = session.user.label ?? session.user.email;
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
 
-    // Obtener perfil primero para saber el label del reclutador
-    const profileRes = await supabaseAuth.from('recruiters').select('*').single();
+    try {
+      // Construye el perfil con lo que tenemos del JWT.
+      const builtProfile: RecruiterProfile = {
+        id:             session.user.id,
+        name:           session.user.name ?? session.user.email,
+        label:          recruiterLabel,
+        calendar_url:   session.user.calendar_url ?? '',
+        weight:         session.user.weight ?? 0,
+        total_assigned: session.user.total_assigned ?? 0,
+      };
+      setProfile(builtProfile);
 
-    if (profileRes.error) {
-      setError('No se encontró perfil de reclutador asociado a esta cuenta.');
+      // Carga las evaluaciones asignadas a este recruiter.
+      // El backend, si el JWT es de recruiter, fuerza el filtro por label.
+      // Igualmente lo enviamos explícito para compatibilidad y para admins
+      // que actúen como reclutadores.
+      const res = await apiEvaluations.list({ assigned_to: recruiterLabel });
+      const rows: PortalEvaluation[] = (res.rows ?? []).map((r: EvaluationListItem) => ({
+        session_id:       r.session_id,
+        name:             r.name,
+        phone:            r.phone,
+        location:         r.location,
+        score_total:      r.score_total,
+        status:           r.status,
+        assigned_to:      r.assigned_to,
+        interview_status: r.interview_status,
+        interview_date:   r.interview_date,
+        created_at:       r.created_at,
+        completed_at:     r.completed_at,
+        email:            r.email,
+        recruiter_notes:  null,
+      }));
+      setEvaluations(rows);
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      setError(msg);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const recruiterProfile = profileRes.data as RecruiterProfile;
-    setProfile(recruiterProfile);
-
-    // Filtrar evaluaciones por assigned_to = label del reclutador autenticado
-    const evalsRes = await supabaseAuth
-      .from('evaluations')
-      .select('session_id, name, phone, location, score_total, status, assigned_to, interview_status, interview_date, created_at, completed_at, email, recruiter_notes')
-      .eq('assigned_to', recruiterProfile.label)
-      .order('created_at', { ascending: false });
-
-    if (!evalsRes.error) {
-      setEvaluations((evalsRes.data || []) as PortalEvaluation[]);
-    }
-
-    setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const handleLogout = async () => {
-    await supabaseAuth.auth.signOut();
+    await apiAuth.logout();
     onLogout();
   };
 
@@ -505,19 +547,21 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
                         </div>
                       ))}
                     </div>
-                    <div>
-                      <span className="text-muted-foreground text-xs">URL del calendario</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <a href={profile.calendar_url} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-primary text-xs hover:underline truncate max-w-xs">
-                          <ExternalLink size={11} />{profile.calendar_url}
-                        </a>
-                        <button onClick={handleCopy}
-                          className="shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:text-primary text-muted-foreground transition-all">
-                          {copied ? <><Check size={12} className="text-success" />Copiado</> : <><Copy size={12} />Copiar enlace</>}
-                        </button>
+                    {profile.calendar_url && (
+                      <div>
+                        <span className="text-muted-foreground text-xs">URL del calendario</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <a href={profile.calendar_url} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-primary text-xs hover:underline truncate max-w-xs">
+                            <ExternalLink size={11} />{profile.calendar_url}
+                          </a>
+                          <button onClick={handleCopy}
+                            className="shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:text-primary text-muted-foreground transition-all">
+                            {copied ? <><Check size={12} className="text-success" />Copiado</> : <><Copy size={12} />Copiar enlace</>}
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -540,20 +584,20 @@ function PortalDashboard({ session, onLogout }: { session: Session; onLogout: ()
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Portal() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<PortalSession | null>(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabaseAuth.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let cancelled = false;
+    if (!apiAuth.isAuthenticated()) {
       setChecking(false);
-    });
-
-    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
-    return () => subscription.unsubscribe();
+      return;
+    }
+    apiAuth.me()
+      .then(res => { if (!cancelled) setSession({ user: res.user as RecruiterUser }); })
+      .catch(() => { if (!cancelled) setSession(null); })
+      .finally(() => { if (!cancelled) setChecking(false); });
+    return () => { cancelled = true; };
   }, []);
 
   if (checking) {

@@ -1,10 +1,21 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare } from 'lucide-react';
-import type { Session } from '@supabase/supabase-js';
 import MagnetLogo from '@/components/MagnetLogo';
 import { useAdmin, AdminEvaluation, updateInterviewData } from '@/hooks/useAdmin';
-import { supabaseAuth } from '@/lib/supabase';
+import {
+  auth as apiAuth,
+  recruiters as apiRecruiters,
+  ApiError,
+  API_BASE_URL,
+  type AdminUser,
+  type Recruiter as ApiRecruiter,
+} from '@/lib/api';
+
+// Sesión admin (forma minimal — reemplaza al `Session` de Supabase).
+interface AdminSession {
+  user: AdminUser;
+}
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -121,20 +132,20 @@ function ScoreBar({ label, value, max = 25 }: { label: string; value: number; ma
 
 function CVLinks({ candidate }: { candidate: AdminEvaluation }) {
   const [cvUrl, setCvUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const isStoragePath = (url: string) => url && !url.startsWith('http') && url.includes('/');
+  const loading = false;
 
   useEffect(() => {
     const raw = candidate.cv_url;
-    if (!raw) return;
-    if (isStoragePath(raw)) {
-      setLoading(true);
-      supabaseAuth.storage.from('cvs').createSignedUrl(raw, 60 * 60)
-        .then(({ data }) => { if (data?.signedUrl) setCvUrl(data.signedUrl); })
-        .finally(() => setLoading(false));
-    } else {
+    if (!raw) { setCvUrl(null); return; }
+    // El backend devuelve URLs absolutas o paths tipo `/files/cv-xxx.pdf`.
+    // Si llega un path relativo, lo prefijamos con la base de la API.
+    if (/^https?:\/\//i.test(raw)) {
       setCvUrl(raw);
+    } else if (raw.startsWith('/')) {
+      setCvUrl(`${API_BASE_URL}${raw}`);
+    } else {
+      // Posible filename suelto — lo servimos vía /files/:filename
+      setCvUrl(`${API_BASE_URL}/files/${raw}`);
     }
   }, [candidate.cv_url]);
 
@@ -256,10 +267,10 @@ function DetailModal({ candidate, onClose, onUpdate }: {
     assigned_to?: string;
   }) => {
     setSaving(true);
-    await updateInterviewData(candidate.session_id, patch);
+    await updateInterviewData(candidate.id, patch);
     onUpdate(patch);
     setSaving(false);
-  }, [candidate.session_id, onUpdate]);
+  }, [candidate.id, onUpdate]);
 
   const handleStatusChange = (val: string) => {
     setInterviewStatus(val);
@@ -617,17 +628,15 @@ function DetailModal({ candidate, onClose, onUpdate }: {
 
 // ─── RecruiterPanel ───────────────────────────────────────────────────────────
 
-interface Recruiter {
-  id: string;
-  name: string;
-  label: string;
-  calendar_url: string;
-  weight: number;
-  active: boolean;
-  total_assigned: number;
+type Recruiter = ApiRecruiter & { active: boolean };
+
+function toBool(v: boolean | number | undefined | null): boolean {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number')  return v === 1;
+  return false;
 }
 
-function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAuth }) {
+function RecruiterPanel() {
   const [recruiters, setRecruiters] = useState<Recruiter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -641,16 +650,17 @@ function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAut
   const fetchRecruiters = async () => {
     setLoading(true);
     setError(null);
-    const { data, error: fetchError } = await supabaseClient
-      .from('recruiters')
-      .select('*')
-      .order('label');
-    if (fetchError) {
-      setError(fetchError.message);
-    } else {
-      setRecruiters(data || []);
+    try {
+      const res = await apiRecruiters.list();
+      const rows = (res.rows ?? [])
+        .map(r => ({ ...r, active: toBool(r.active) }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      setRecruiters(rows);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchRecruiters(); }, []);
@@ -667,27 +677,28 @@ function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAut
 
   const saveEdit = async (id: string) => {
     setSaving(true);
-    const { error: upErr } = await supabaseClient
-      .from('recruiters')
-      .update({ name: editDraft.name, calendar_url: editDraft.calendar_url, weight: editDraft.weight })
-      .eq('id', id);
-    if (upErr) {
-      setError(upErr.message);
-    } else {
-      setRecruiters(prev => prev.map(r => r.id === id ? { ...r, ...editDraft } : r));
+    try {
+      await apiRecruiters.update(id, {
+        name:         editDraft.name,
+        calendar_url: editDraft.calendar_url,
+        weight:       editDraft.weight,
+      });
+      setRecruiters(prev => prev.map(r => r.id === id ? { ...r, ...editDraft } as Recruiter : r));
       setEditingId(null);
       setEditDraft({});
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const toggleActive = async (r: Recruiter) => {
-    const { error: upErr } = await supabaseClient
-      .from('recruiters')
-      .update({ active: !r.active })
-      .eq('id', r.id);
-    if (!upErr) {
+    try {
+      await apiRecruiters.update(r.id, { active: !r.active });
       setRecruiters(prev => prev.map(x => x.id === r.id ? { ...x, active: !x.active } : x));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -697,15 +708,19 @@ function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAut
       setAddError('Nombre, label y URL del calendario son requeridos.');
       return;
     }
-    const { error: insErr } = await supabaseClient
-      .from('recruiters')
-      .insert({ ...newRecruiter, active: false, total_assigned: 0 });
-    if (insErr) {
-      setAddError(insErr.message);
-    } else {
+    try {
+      await apiRecruiters.create({
+        name:         newRecruiter.name,
+        label:        newRecruiter.label,
+        calendar_url: newRecruiter.calendar_url,
+        weight:       newRecruiter.weight,
+        active:       false,
+      });
       setShowAddForm(false);
       setNewRecruiter({ name: '', label: '', calendar_url: '', weight: 0 });
       fetchRecruiters();
+    } catch (e) {
+      setAddError(e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -894,9 +909,9 @@ function RecruiterPanel({ supabaseClient }: { supabaseClient: typeof supabaseAut
   );
 }
 
-// ─── Login (Supabase Auth) ────────────────────────────────────────────────────
+// ─── Login (backend Express + JWT) ────────────────────────────────────────────
 
-function LoginScreen({ onLogin }: { onLogin: (session: Session) => void }) {
+function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -909,22 +924,17 @@ function LoginScreen({ onLogin }: { onLogin: (session: Session) => void }) {
     }
     setLoading(true);
     setError(null);
-    const { data, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
-    if (authError || !data.session) {
+    try {
+      const res = await apiAuth.login(email, password);
       setLoading(false);
-      setError('Credenciales incorrectas.');
-      return;
+      onLogin({ user: res.user });
+    } catch (e) {
+      setLoading(false);
+      const msg = e instanceof ApiError
+        ? (e.status === 401 ? 'Credenciales incorrectas.' : (e.message || 'Error al iniciar sesión.'))
+        : 'Error al iniciar sesión.';
+      setError(msg);
     }
-    // Verificar que el usuario esté en la tabla admins
-    const { data: adminRow, error: adminError } = await supabaseAuth
-      .from('admins').select('id').eq('id', data.session.user.id).maybeSingle();
-    setLoading(false);
-    if (adminError || !adminRow) {
-      await supabaseAuth.auth.signOut();
-      setError('Este usuario no tiene acceso de administrador.');
-      return;
-    }
-    onLogin(data.session);
   };
 
   return (
@@ -983,7 +993,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: Session) => void }) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Admin() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<AdminSession | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores'>('candidatos');
   const [search, setSearch] = useState('');
@@ -993,28 +1003,26 @@ export default function Admin() {
   const [dateTo, setDateTo] = useState<string>('');
   const [selectedCandidate, setSelectedCandidate] = useState<AdminEvaluation | null>(null);
 
-  // Verificar sesión existente al montar
+  // Verificar sesión existente al montar (token persistido en localStorage)
   useEffect(() => {
-    supabaseAuth.auth.getSession().then(async ({ data }) => {
-      if (!data.session) { setCheckingSession(false); return; }
-      const { data: adminRow } = await supabaseAuth
-        .from('admins').select('id').eq('id', data.session.user.id).maybeSingle();
-      setSession(adminRow ? data.session : null);
-      if (!adminRow) await supabaseAuth.auth.signOut();
+    let cancelled = false;
+    if (!apiAuth.isAuthenticated()) {
       setCheckingSession(false);
-    });
-    const { data: subscription } = supabaseAuth.auth.onAuthStateChange((_ev, s) => {
-      if (!s) setSession(null);
-    });
-    return () => subscription.subscription.unsubscribe();
+      return;
+    }
+    apiAuth.me()
+      .then(res => { if (!cancelled) setSession({ user: res.user }); })
+      .catch(() => { if (!cancelled) setSession(null); })
+      .finally(() => { if (!cancelled) setCheckingSession(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const { evaluations, loading, error, refetch } = useAdmin(!!session);
 
-  const handleLogin = (s: Session) => setSession(s);
+  const handleLogin = (s: AdminSession) => setSession(s);
 
   const handleLogout = async () => {
-    await supabaseAuth.auth.signOut();
+    await apiAuth.logout();
     setSession(null);
   };
 
@@ -1146,7 +1154,7 @@ export default function Admin() {
         </div>
 
         {activeTab === 'reclutadores' && (
-          <RecruiterPanel supabaseClient={supabaseAuth} />
+          <RecruiterPanel />
         )}
 
         {activeTab === 'candidatos' && (<>

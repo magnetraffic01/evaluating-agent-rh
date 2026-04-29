@@ -1,11 +1,17 @@
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+// src/lib/storage.ts
+// Subida de CVs al backend Express. Reemplaza al storage de Supabase.
 
-const BUCKET = 'cvs';
+import { storage as apiStorage, ApiError, API_BASE_URL } from '@/lib/api';
+
 const MAX_SIZE_MB = 5;
-const ALLOWED_TYPES = ['application/pdf', 'application/msword',
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/jpeg', 'image/png', 'image/webp'];
-const SIGNED_URL_TTL = 60 * 60 * 24 * 365; // 1 año en segundos
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
 
 export type UploadResult =
   | { ok: true;  path: string; signedUrl: string }
@@ -25,43 +31,42 @@ export function validateFile(file: File): string | null {
 }
 
 /**
- * Sube un CV al bucket privado 'cvs' y retorna una URL firmada.
- * Ruta: cvs/{sessionId}/{timestamp}-{nombre_sanitizado}
+ * Convierte la URL devuelta por el backend en una URL absoluta utilizable
+ * desde el frontend (en caso de que el backend devuelva una ruta relativa
+ * tipo `/files/cv-xxx.pdf`).
+ */
+function toAbsoluteUrl(url: string): string {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = API_BASE_URL.replace(/\/+$/, '');
+  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+/**
+ * Sube un CV al backend y retorna la URL pública/servible.
+ * El parámetro `sessionId` se conserva para compatibilidad con el flujo
+ * existente, aunque actualmente el backend genera nombres únicos por sí mismo.
  */
 export async function uploadCV(
   file: File,
-  sessionId: string,
+  _sessionId: string,
   onProgress?: (pct: number) => void,
 ): Promise<UploadResult> {
-  // Sanitizar nombre del archivo
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
-  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\s+/g, '_');
-  const path = `${sessionId}/${Date.now()}-${safe}`;
-
-  // Simular progreso inicial mientras sube (Supabase JS no expone progreso real)
+  // Progreso simulado — fetch no expone progreso de upload nativo.
   onProgress?.(10);
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: false });
-
-  if (uploadError) {
-    return { ok: false, error: uploadError.message };
+  try {
+    const res = await apiStorage.upload(file);
+    onProgress?.(100);
+    const absoluteUrl = toAbsoluteUrl(res.url);
+    return { ok: true, path: res.filename, signedUrl: absoluteUrl };
+  } catch (e) {
+    const msg = e instanceof ApiError
+      ? (e.code === 'file_too_large'   ? `El archivo supera los ${MAX_SIZE_MB} MB permitidos.`
+        : e.code === 'mime_not_allowed' ? 'Formato no permitido.'
+        : e.code === 'file_required'    ? 'No se recibió ningún archivo.'
+        : (e.message || 'Error al subir el archivo.'))
+      : 'Error al subir el archivo.';
+    return { ok: false, error: msg };
   }
-
-  onProgress?.(80);
-
-  // Generar URL firmada con el cliente admin (bucket privado)
-  const { data: signedData, error: signedError } = await supabaseAdmin.storage
-    .from(BUCKET)
-    .createSignedUrl(path, SIGNED_URL_TTL);
-
-  onProgress?.(100);
-
-  if (signedError || !signedData?.signedUrl) {
-    // Subida exitosa pero no se pudo firmar — guardamos el path como fallback
-    return { ok: true, path, signedUrl: path };
-  }
-
-  return { ok: true, path, signedUrl: signedData.signedUrl };
 }
