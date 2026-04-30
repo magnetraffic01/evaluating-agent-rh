@@ -302,11 +302,13 @@ export default function Evaluate() {
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 mb-10">
-              {[t('welcome_badge_time'), t('welcome_badge_nopause'), t('welcome_badge_unique')].map((badge) => (
-                <span key={badge} className="px-4 py-2 rounded-full border border-primary/30 text-sm text-foreground bg-primary/5">
-                  {badge}
-                </span>
-              ))}
+              {[t('welcome_badge_time'), t('welcome_badge_nopause'), t('welcome_badge_unique')]
+                .filter(Boolean)
+                .map((badge) => (
+                  <span key={badge} className="px-4 py-2 rounded-full border border-primary/30 text-sm text-foreground bg-primary/5">
+                    {badge}
+                  </span>
+                ))}
             </div>
 
             <button

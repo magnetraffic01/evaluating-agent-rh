@@ -10,13 +10,13 @@ const translations = {
     invalid_link: 'Enlace inválido. Contacta a tu reclutador.',
 
     // Evaluate — welcome
-    welcome_subtitle: 'Evaluación de Closer Comercial Remoto',
+    welcome_subtitle: '🎯 Closer Comercial Remoto · Full-time',
     welcome_description:
-      'Esta evaluación toma aproximadamente 15-20 minutos. Responde con honestidad — evaluamos criterio real, no respuestas perfectas. El proceso debe completarse sin interrupciones.',
-    welcome_badge_time: '⏱ 15-20 minutos',
-    welcome_badge_nopause: '📱 Sin pausas',
-    welcome_badge_unique: '🎯 Evaluación única',
-    welcome_start: 'Comenzar Evaluación →',
+      'Para llegar a la entrevista, primero queremos conocerte con una evaluación corta.',
+    welcome_badge_time: 'Vendedor independiente · Mercado hispano en EE.UU.',
+    welcome_badge_nopause: '15 min · Tus respuestas se guardan automáticamente',
+    welcome_badge_unique: '',
+    welcome_start: 'Comenzar →',
     step_progress: 'Paso {step} de {total}',
 
     // Step 0 — Consent
@@ -219,13 +219,13 @@ const translations = {
     invalid_link: 'Invalid link. Please contact your recruiter.',
 
     // Evaluate — welcome
-    welcome_subtitle: 'Remote Commercial Closer Evaluation',
+    welcome_subtitle: '🎯 Remote Commercial Closer · Full-time',
     welcome_description:
-      'This evaluation takes approximately 15-20 minutes. Answer honestly — we evaluate real judgment, not perfect answers. The process must be completed without interruptions.',
-    welcome_badge_time: '⏱ 15-20 minutes',
-    welcome_badge_nopause: '📱 No pauses',
-    welcome_badge_unique: '🎯 One-time evaluation',
-    welcome_start: 'Start Evaluation →',
+      'Before the interview, we\'d like to get to know you with a short evaluation.',
+    welcome_badge_time: 'Independent contractor · US Hispanic market',
+    welcome_badge_nopause: '15 min · Your answers are saved automatically',
+    welcome_badge_unique: '',
+    welcome_start: 'Start →',
     step_progress: 'Step {step} of {total}',
 
     // Step 0 — Consent
