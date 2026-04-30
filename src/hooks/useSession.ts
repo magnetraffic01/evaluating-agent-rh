@@ -55,6 +55,7 @@ function toCreatePayload(state: EvaluationState): EvaluationCreateBody {
     highlight:       state.highlight || null,
     cv_url:          state.cvUrl || null,
     linkedin_url:    state.linkedinUrl || null,
+    company:         state.company,
     score_total:     state.totalScore,
     score_breakdown: state.scores,
     flags:           state.flags as unknown as Record<string, unknown>,
@@ -70,6 +71,18 @@ function toUpdatePayload(state: EvaluationState): EvaluationUpdateBody {
   return {
     status:          state.status,
     disqualify_reason: state.disqualifyReason,
+    // Pre-existing bug: estos campos top-level no se enviaban en el PATCH,
+    // por lo que email / location / cv_url etc se quedaban null en la DB
+    // aunque el candidato los hubiera llenado.
+    email:           state.email || null,
+    location:        state.location || null,
+    daily_calls:     state.dailyCalls || null,
+    last_income:     state.lastIncome || null,
+    exit_reason:     state.exitReason || null,
+    highlight:       state.highlight || null,
+    cv_url:          state.cvUrl || null,
+    linkedin_url:    state.linkedinUrl || null,
+    company:         state.company,
     assigned_to:     state.assignedTo || null,
     score_total:     state.totalScore,
     score_breakdown: state.scores,
@@ -87,6 +100,9 @@ function buildAnswers(state: EvaluationState): Record<string, unknown> {
     experience:            state.experience,
     closingRole:           state.closingRole,
     closingVolume:         state.closingVolume,
+    // Pre-existing bug: el mensaje de reactivación NO se incluía en el sync,
+    // por lo que el dashboard no mostraba lo que escribió el candidato.
+    reactivationMsg:       state.reactivationMsg,
     objectionResponse:     state.objectionResponse,
     autonomyDesc:          state.autonomyDesc,
     philosophy:            state.philosophy,

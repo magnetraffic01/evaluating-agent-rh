@@ -81,6 +81,7 @@ export interface EvaluationCreateBody {
   highlight?: string | null;
   cv_url?: string | null;
   linkedin_url?: string | null;
+  company?: 'trebolife' | 'traduce' | null;
   score_total?: number;
   score_breakdown?: Record<string, unknown>;
   flags?: unknown[] | Record<string, unknown>;
@@ -96,6 +97,15 @@ export interface EvaluationCreateBody {
 export interface EvaluationUpdateBody {
   status?: string | null;
   disqualify_reason?: string | null;
+  email?: string | null;
+  location?: string | null;
+  daily_calls?: number | null;
+  last_income?: number | null;
+  exit_reason?: string | null;
+  highlight?: string | null;
+  cv_url?: string | null;
+  linkedin_url?: string | null;
+  company?: 'trebolife' | 'traduce' | null;
   assigned_to?: string | null;
   interview_status?: string | null;
   interview_date?: string | null;
