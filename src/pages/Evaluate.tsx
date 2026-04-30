@@ -9,8 +9,9 @@ import { EvaluationState, createInitialState } from '@/types/evaluation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   scoreClosingRole, isClosingRoleDisqualify, scoreVolume,
-  scoreIncomePenalty, scoreReactivation, scoreObjection,
-  scoreAutonomy, scorePhilosophy, philosophyPenalty,
+  scoreIncomePenalty,
+  scoreReactivationAsync, scoreObjectionAsync, scoreAutonomyAsync,
+  scorePhilosophy, philosophyPenalty,
   scoreStability, calculateTotalScore, calculateFinalStatus,
 } from '@/utils/scoring';
 import { syncToSupabase, completeInSupabase } from '@/hooks/useSession';
@@ -162,8 +163,8 @@ export default function Evaluate() {
         break;
       }
 
-      case 5: { // Reactivation
-        const result = scoreReactivation(data.reactivationMsg);
+      case 5: { // Reactivation (LLM-scored)
+        const result = await scoreReactivationAsync(data.reactivationMsg);
         updated.scores = { ...updated.scores, E3_copywriting: result.score };
         if (result.disqualify) {
           handleDisqualify('sin_copywriting');
@@ -173,8 +174,8 @@ export default function Evaluate() {
         break;
       }
 
-      case 6: { // Objection
-        const result = scoreObjection(data.objectionResponse);
+      case 6: { // Objection (LLM-scored)
+        const result = await scoreObjectionAsync(data.objectionResponse);
         updated.scores = { ...updated.scores, E4_objeciones: result.score };
         if (result.disqualify) {
           handleDisqualify('sin_objeciones');
@@ -183,8 +184,8 @@ export default function Evaluate() {
         break;
       }
 
-      case 7: { // Autonomy
-        const result = scoreAutonomy(data.autonomyDesc);
+      case 7: { // Autonomy (LLM-scored)
+        const result = await scoreAutonomyAsync(data.autonomyDesc);
         updated.scores = { ...updated.scores, E5_autonomia: result.score };
         updated.flags = { ...updated.flags, baja_ejecucion: result.bajaEjecucion };
         break;

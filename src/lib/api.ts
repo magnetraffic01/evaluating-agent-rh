@@ -401,6 +401,32 @@ export const storage = {
   },
 };
 
+// ─── Scoring (LLM via backend) ───────────────────────────────────────────────
+
+export type ScoreField = 'reactivation' | 'objection' | 'autonomy';
+
+export interface ScoreTextResponse {
+  score: number;
+  reasoning?: string;
+  disqualify?: boolean;
+  highlight_worthy?: boolean;
+  offered_discount?: boolean;
+  baja_ejecucion?: boolean;
+  _fallback?: boolean;
+  _skipped?: string;
+  _error?: string;
+}
+
+export const score = {
+  text(field: ScoreField, text: string) {
+    return api.post<ScoreTextResponse>(
+      '/api/hr/score/text',
+      { field, text },
+      { anonymous: true },
+    );
+  },
+};
+
 // Default export — ergonomía para `import api from '@/lib/api'`
 const apiClient = {
   ...api,

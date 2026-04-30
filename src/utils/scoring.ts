@@ -1,4 +1,5 @@
 import { EvaluationState, EvaluationStatus } from '@/types/evaluation';
+import { score as scoreApi } from '@/lib/api';
 
 export const THRESHOLDS = {
   ELITE: 110,
@@ -118,4 +119,114 @@ export function scoreStability(answer: string): { score: number; riesgoRetencion
 
 export function getHalfDailyCalls(dailyCalls: number): number {
   return Math.round(dailyCalls / 2);
+}
+
+// ─── Async LLM scoring (Claude Haiku 4.5 via backend) ─────────────────────────
+// Si el backend está disponible, usa LLM. Si falla por cualquier motivo,
+// hace fallback al regex local. Nunca bloquea el flujo del candidato.
+
+const LLM_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('llm_timeout')), ms);
+    promise.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
+}
+
+export interface ReactivationResult {
+  score: number;
+  disqualify: boolean;
+  highlightWorthy?: boolean;
+  reasoning?: string;
+  source: 'llm' | 'regex';
+}
+
+export async function scoreReactivationAsync(text: string): Promise<ReactivationResult> {
+  const t = text.trim();
+  if (!t || t.length < 10) {
+    return { score: 0, disqualify: true, source: 'regex' };
+  }
+  try {
+    const r = await withTimeout(scoreApi.text('reactivation', t), LLM_TIMEOUT_MS);
+    if (r._fallback || r._error) {
+      const fb = scoreReactivation(t);
+      return { ...fb, source: 'regex' };
+    }
+    return {
+      score: r.score,
+      disqualify: !!r.disqualify,
+      highlightWorthy: !!r.highlight_worthy,
+      reasoning: r.reasoning,
+      source: 'llm',
+    };
+  } catch (_e) {
+    const fb = scoreReactivation(t);
+    return { ...fb, source: 'regex' };
+  }
+}
+
+export interface ObjectionResult {
+  score: number;
+  disqualify: boolean;
+  offeredDiscount?: boolean;
+  reasoning?: string;
+  source: 'llm' | 'regex';
+}
+
+export async function scoreObjectionAsync(text: string): Promise<ObjectionResult> {
+  const t = text.trim();
+  if (!t || t.length < 10) {
+    return { score: 0, disqualify: true, source: 'regex' };
+  }
+  try {
+    const r = await withTimeout(scoreApi.text('objection', t), LLM_TIMEOUT_MS);
+    if (r._fallback || r._error) {
+      const fb = scoreObjection(t);
+      return { ...fb, source: 'regex' };
+    }
+    return {
+      score: r.score,
+      disqualify: !!r.disqualify,
+      offeredDiscount: !!r.offered_discount,
+      reasoning: r.reasoning,
+      source: 'llm',
+    };
+  } catch (_e) {
+    const fb = scoreObjection(t);
+    return { ...fb, source: 'regex' };
+  }
+}
+
+export interface AutonomyResult {
+  score: number;
+  bajaEjecucion: boolean;
+  reasoning?: string;
+  source: 'llm' | 'regex';
+}
+
+export async function scoreAutonomyAsync(text: string): Promise<AutonomyResult> {
+  const t = text.trim();
+  if (!t || t.length < 20) {
+    return { score: 0, bajaEjecucion: true, source: 'regex' };
+  }
+  try {
+    const r = await withTimeout(scoreApi.text('autonomy', t), LLM_TIMEOUT_MS);
+    if (r._fallback || r._error) {
+      const fb = scoreAutonomy(t);
+      return { ...fb, source: 'regex' };
+    }
+    return {
+      score: r.score,
+      bajaEjecucion: !!r.baja_ejecucion,
+      reasoning: r.reasoning,
+      source: 'llm',
+    };
+  } catch (_e) {
+    const fb = scoreAutonomy(t);
+    return { ...fb, source: 'regex' };
+  }
 }
