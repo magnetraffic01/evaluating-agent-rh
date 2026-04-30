@@ -16,6 +16,7 @@ import VerificationStep from './steps/VerificationStep';
 import StabilityStep from './steps/StabilityStep';
 import FinancialStep from './steps/FinancialStep';
 import PreRegistrationStep from './steps/PreRegistrationStep';
+import ChurnResistanceStep from './steps/ChurnResistanceStep';
 import CVStep from './steps/CVStep';
 
 interface StepRendererProps {
@@ -27,6 +28,8 @@ interface StepRendererProps {
 
 export default function StepRenderer({ step, state, onNext, onDisqualify }: StepRendererProps) {
   const [direction, setDirection] = useState(1);
+  const company = state.company;
+  const isTrebolife = company === 'trebolife';
 
   const variants = {
     enter: { x: 30, opacity: 0 },
@@ -37,18 +40,23 @@ export default function StepRenderer({ step, state, onNext, onDisqualify }: Step
   const renderStep = () => {
     switch (step) {
       case 0: return <ConsentStep name={state.name} onNext={onNext} onDisqualify={onDisqualify} />;
-      case 1: return <BasicInfoStep name={state.name} onNext={onNext} onDisqualify={onDisqualify} />;
-      case 2: return <ExperienceStep onNext={onNext} />;
+      case 1: return <BasicInfoStep name={state.name} onNext={onNext} onDisqualify={onDisqualify} company={company} />;
+      case 2: return <ExperienceStep onNext={onNext} company={company} />;
       case 3: return <ClosingRoleStep onNext={onNext} onDisqualify={onDisqualify} />;
       case 4: return <IncomeStep onNext={onNext} />;
       case 5: return <ReactivationStep onNext={onNext} onDisqualify={onDisqualify} />;
-      case 6: return <ObjectionStep onNext={onNext} onDisqualify={onDisqualify} />;
+      case 6: return <ObjectionStep onNext={onNext} onDisqualify={onDisqualify} company={company} />;
       case 7: return <AutonomyStep onNext={onNext} />;
       case 8: return <PhilosophyStep onNext={onNext} />;
       case 9: return <VerificationStep dailyCalls={state.dailyCalls} onNext={onNext} />;
       case 10: return <StabilityStep name={state.name} onNext={onNext} />;
-      case 11: return <FinancialStep onNext={onNext} onDisqualify={onDisqualify} />;
-      case 12: return <PreRegistrationStep onNext={onNext} />;
+      case 11: return <FinancialStep onNext={onNext} onDisqualify={onDisqualify} company={company} />;
+      case 12:
+        // Trebolife: ChurnResistance reemplaza el PreReg de edad/estado civil.
+        // (Email para Trebolife ya se capturó en BasicInfo.)
+        return isTrebolife
+          ? <ChurnResistanceStep onNext={onNext} />
+          : <PreRegistrationStep onNext={onNext} />;
       case 13: return <CVStep sessionId={state.sessionId} onNext={onNext} onDisqualify={onDisqualify} />;
       default: return null;
     }

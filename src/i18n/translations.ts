@@ -208,6 +208,43 @@ const translations = {
     expired_title: 'Sesión Expirada',
     expired_desc:
       'Tu sesión de evaluación ha expirado por inactividad.\n\nPor favor, contacta a tu reclutador para recibir un nuevo enlace de evaluación.',
+
+    // ─── Trebolife specific ──────────────────────────────────────────────────
+    basic_more40: 'Sí, tengo 40+ horas semanales disponibles ✓',
+    basic_less40: 'No, tengo menos de 40 horas',
+    basic_email_label: 'Correo electrónico',
+    basic_email_placeholder: 'tu@email.com',
+    basic_description_trebolife:
+      'Hola {name}. Para closer de Trebolife necesitamos confirmar 3 cosas:\n\n• Desde dónde nos escribes\n• Tu correo (para enviarte la información del proceso)\n• Que tengas 40+ horas semanales reales (la cuota mínima es 5 ventas/día)',
+
+    exp_description_trebolife:
+      'En Trebolife vendes seguros de salud accesibles ($14-$45/mes) por suscripción.\n\nCuéntame:\n• ¿Has cerrado SUSCRIPCIONES recurrentes (seguros, telecom, gym, software)?\n• ¿Cuánto duraba en promedio tu cliente sin cancelar?\n• ¿Vendiste a familias hispanas en EE.UU. antes?',
+
+    objection_setup_trebolife:
+      'Estás en una llamada con un prospecto. Le presentaste el plan Health Plus de Trebolife ($29.99/mes) y te dice:',
+    objection_quote_trebolife:
+      '💬 "Mira, agradezco la llamada pero ya tengo Obamacare, no necesito otro seguro"',
+    objection_description_trebolife:
+      '¿Qué le respondes EXACTAMENTE? Escribe la frase real que dirías en la llamada — no el concepto, las palabras.',
+
+    // Step 11 — Ramp-up (Trebolife)
+    ramp_title: 'Velocidad de arranque',
+    ramp_description:
+      'En Trebolife un closer competente cierra ~5 ventas/día.\n\n• Mes 1 = $1,100\n• Mes 2 = $2,090\n• Mes 6 = $6,050\n• Mes 12 = $11,900\n\n¿En qué semana esperas estar cerrando 5 ventas al día de forma sostenida?',
+    ramp_week_1_2: 'Semana 1-2 (cierro rápido, ya tengo el método)',
+    ramp_week_3_4: 'Semana 3-4 (necesito calibrar el script y conocer el producto)',
+    ramp_month_2: 'Mes 2 (necesito un mes completo de práctica)',
+    ramp_month_3_plus: 'Mes 3 o más (necesito tiempo para aprender desde cero)',
+
+    // Step 12 — Churn resistance (Trebolife)
+    churn_title: 'Cierre con FIT vs cierre con presión',
+    churn_scenario:
+      'Cerraste el plan Dental con María. Pagó el primer mes y, antes del 2do pago, cancela diciendo: "no lo estoy usando, no me sirve".',
+    churn_question:
+      '¿Qué hubieras hecho DISTINTO en la llamada inicial para que María llegara feliz al mes 6? Sé concreto: ¿qué pregunta no le hiciste? ¿qué expectativa no aclaraste? ¿qué le prometiste de más?',
+    churn_placeholder:
+      'Ej: en la llamada no le pregunté si ya tiene dentista de cabecera. Si no usa el seguro porque no tiene a quién acudir...',
+    churn_hint: 'Esta respuesta la lee la reclutadora — sé honesto, no genérico.',
   },
 
   en: {
@@ -416,6 +453,41 @@ const translations = {
     expired_title: 'Session Expired',
     expired_desc:
       'Your evaluation session has expired due to inactivity.\n\nPlease contact your recruiter to receive a new evaluation link.',
+
+    // ─── Trebolife specific ──────────────────────────────────────────────────
+    basic_more40: 'Yes, I have 40+ hours available per week ✓',
+    basic_less40: 'No, I have less than 40 hours',
+    basic_email_label: 'Email address',
+    basic_email_placeholder: 'you@email.com',
+    basic_description_trebolife:
+      "Hi {name}. To be a Trebolife closer we need to confirm 3 things:\n\n• Where you're writing from\n• Your email (so we can send you process info)\n• That you actually have 40+ hours per week (minimum quota is 5 sales/day)",
+
+    exp_description_trebolife:
+      'At Trebolife you sell accessible health insurance ($14-$45/mo) on a subscription basis.\n\nTell me:\n• Have you closed RECURRING subscriptions (insurance, telecom, gym, software)?\n• On average, how long did your client stay before cancelling?\n• Have you sold to Hispanic families in the US before?',
+
+    objection_setup_trebolife:
+      "You're on a call with a prospect. You've pitched the Trebolife Health Plus plan ($29.99/mo) and they say:",
+    objection_quote_trebolife:
+      "💬 \"Look, I appreciate the call but I already have Obamacare, I don't need another insurance\"",
+    objection_description_trebolife:
+      'What do you respond EXACTLY? Write the real phrase you would say on the call — not the concept, the actual words.',
+
+    ramp_title: 'Ramp-up speed',
+    ramp_description:
+      'A competent Trebolife closer closes ~5 sales/day.\n\n• Month 1 = $1,100\n• Month 2 = $2,090\n• Month 6 = $6,050\n• Month 12 = $11,900\n\nBy which week do you expect to be consistently closing 5 sales/day?',
+    ramp_week_1_2: 'Week 1-2 (I close fast, I already have the method)',
+    ramp_week_3_4: 'Week 3-4 (I need to calibrate the script and learn the product)',
+    ramp_month_2: 'Month 2 (I need a full month of practice)',
+    ramp_month_3_plus: 'Month 3 or more (I need time to learn from scratch)',
+
+    churn_title: 'Closing with FIT vs closing with pressure',
+    churn_scenario:
+      'You closed the Dental plan with Maria. She paid the first month and, before the 2nd payment, cancels saying: "I\'m not using it, it\'s not useful for me".',
+    churn_question:
+      'What would you have done DIFFERENTLY on the initial call so Maria would have made it happily to month 6? Be concrete: what question did you not ask? what expectation did you not clarify? what did you over-promise?',
+    churn_placeholder:
+      "E.g.: on the call I didn't ask if she has a regular dentist. If she's not using it because she has no one to go to...",
+    churn_hint: "The recruiter reads this — be honest, don't go generic.",
   },
 } as const;
 

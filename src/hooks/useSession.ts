@@ -82,6 +82,7 @@ function toUpdatePayload(state: EvaluationState): EvaluationUpdateBody {
 
 function buildAnswers(state: EvaluationState): Record<string, unknown> {
   return {
+    company:               state.company,
     availability:          state.availability,
     experience:            state.experience,
     closingRole:           state.closingRole,
@@ -93,6 +94,8 @@ function buildAnswers(state: EvaluationState): Record<string, unknown> {
     verificationAnswer:    state.verificationAnswer,
     jobCount:              state.jobCount,
     financialSituation:    state.financialSituation,
+    rampUpExpectation:     state.rampUpExpectation,
+    churnPrevention:       state.churnPrevention,
   };
 }
 

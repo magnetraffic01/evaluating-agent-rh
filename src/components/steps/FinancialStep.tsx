@@ -1,16 +1,34 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Company } from '@/types/evaluation';
 
 interface Props {
   onNext: (data: Record<string, any>) => void;
   onDisqualify: (reason: string) => void;
+  company: Company;
 }
 
-export default function FinancialStep({ onNext, onDisqualify }: Props) {
+/**
+ * Doble propósito según `company`:
+ *  - legacy / null: pregunta de runway financiero (estable / necesita ya).
+ *  - trebolife:    pregunta de RAMP-UP. ¿Cuándo esperas llegar a la cuota
+ *                  mínima de 5 ventas/día? El que dice "mes 3+" no encaja
+ *                  en el modelo de comisión recurrente y descalifica.
+ */
+export default function FinancialStep({ onNext, onDisqualify, company }: Props) {
   const { t } = useLanguage();
   const [answer, setAnswer] = useState('');
 
+  const isTrebolife = company === 'trebolife';
+
   const handleSubmit = () => {
+    if (isTrebolife) {
+      // El scoring + posible descalificación se hacen en Evaluate.tsx
+      // (caso 11) usando scoreRampUp(). Aquí solo enviamos la opción.
+      onNext({ rampUpExpectation: answer });
+      return;
+    }
+    // Flujo legacy
     if (answer === 'needs_now') {
       onDisqualify('sin_runway');
       return;
@@ -18,16 +36,26 @@ export default function FinancialStep({ onNext, onDisqualify }: Props) {
     onNext({ financialSituation: answer });
   };
 
-  const options = [
-    { value: 'stable', label: t('financial_stable') },
-    { value: 'needs_now', label: t('financial_needs_now') },
-  ];
+  const options = isTrebolife
+    ? [
+        { value: 'week_1_2',     label: t('ramp_week_1_2') },
+        { value: 'week_3_4',     label: t('ramp_week_3_4') },
+        { value: 'month_2',      label: t('ramp_month_2') },
+        { value: 'month_3_plus', label: t('ramp_month_3_plus') },
+      ]
+    : [
+        { value: 'stable',     label: t('financial_stable') },
+        { value: 'needs_now',  label: t('financial_needs_now') },
+      ];
+
+  const title       = isTrebolife ? t('ramp_title')       : t('financial_title');
+  const description = isTrebolife ? t('ramp_description') : t('financial_description');
 
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
-      <h2 className="text-xl font-bold text-foreground mb-4">{t('financial_title')}</h2>
+      <h2 className="text-xl font-bold text-foreground mb-4">{title}</h2>
       <p className="text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
-        {t('financial_description')}
+        {description}
       </p>
 
       <div className="space-y-2 mb-6">

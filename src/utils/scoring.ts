@@ -1,10 +1,13 @@
 import { EvaluationState, EvaluationStatus } from '@/types/evaluation';
 import { score as scoreApi } from '@/lib/api';
 
+// Threshold recalibrado tras análisis de los 2,131 candidatos históricos:
+// - Elite subió de 110 a 115 (la diferencia con calificado debe ser real, no cosmética).
+// - Categoría "potencial" eliminada: 28/28 candidatos en ese rango (55-79) NO agendaron entrevista.
+//   Ahora <80 = descartado (la reclutadora ya no recibe leads que nunca convierten).
 export const THRESHOLDS = {
-  ELITE: 110,
+  ELITE: 115,
   CALIFICADO: 80,
-  POTENCIAL: 55,
 };
 
 export function calculateFinalStatus(state: EvaluationState): EvaluationStatus {
@@ -12,14 +15,14 @@ export function calculateFinalStatus(state: EvaluationState): EvaluationStatus {
   const total = calculateTotalScore(state);
   if (total >= THRESHOLDS.ELITE) return 'elite';
   if (total >= THRESHOLDS.CALIFICADO) return 'calificado';
-  if (total >= THRESHOLDS.POTENCIAL) return 'potencial';
   return 'descartado';
 }
 
 export function calculateTotalScore(state: EvaluationState): number {
   const s = state.scores;
   return s.E1_cierre + s.E1_volumen + s.E3_copywriting + s.E4_objeciones +
-    s.E5_autonomia + s.E6_filosofia + s.C1_estabilidad + s.V1_penalty + s.E2_penalty;
+    s.E5_autonomia + s.E6_filosofia + s.C1_estabilidad + s.V1_penalty + s.E2_penalty +
+    s.Ramp1_velocidad;
 }
 
 export function scoreClosingRole(answer: string): number {
@@ -119,6 +122,20 @@ export function scoreStability(answer: string): { score: number; riesgoRetencion
 
 export function getHalfDailyCalls(dailyCalls: number): number {
   return Math.round(dailyCalls / 2);
+}
+
+// ─── Ramp-up scoring (Trebolife) ──────────────────────────────────────────────
+// Filtra al closer que SÍ produce desde la semana 1-2 vs el que necesita
+// 3-4 meses de "aprendizaje". El que tarda demasiado, no encaja en el modelo
+// de comisión recurrente y abandonará antes de generar residual.
+export function scoreRampUp(answer: string): { score: number; disqualify: boolean } {
+  switch (answer) {
+    case 'week_1_2':       return { score: 20, disqualify: false }; // ideal
+    case 'week_3_4':       return { score: 14, disqualify: false }; // aceptable
+    case 'month_2':        return { score: 8,  disqualify: false }; // borderline
+    case 'month_3_plus':   return { score: 0,  disqualify: true  }; // no encaja
+    default:               return { score: 0,  disqualify: true  };
+  }
 }
 
 // ─── Async LLM scoring (Claude Haiku 4.5 via backend) ─────────────────────────

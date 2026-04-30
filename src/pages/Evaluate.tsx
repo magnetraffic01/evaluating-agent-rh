@@ -5,21 +5,31 @@ import { toast } from 'sonner';
 import MagnetLogo from '@/components/MagnetLogo';
 import WavingHand from '@/components/WavingHand';
 import StepRenderer from '@/components/StepRenderer';
-import { EvaluationState, createInitialState } from '@/types/evaluation';
+import {
+  EvaluationState, Company, createInitialState,
+  getSkippedSteps, getTotalVisibleSteps,
+} from '@/types/evaluation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   scoreClosingRole, isClosingRoleDisqualify, scoreVolume,
   scoreIncomePenalty,
   scoreReactivationAsync, scoreObjectionAsync, scoreAutonomyAsync,
   scorePhilosophy, philosophyPenalty,
-  scoreStability, calculateTotalScore, calculateFinalStatus,
+  scoreStability, scoreRampUp, calculateTotalScore, calculateFinalStatus,
 } from '@/utils/scoring';
 import { syncToSupabase, completeInSupabase } from '@/hooks/useSession';
 import { sendWebhook } from '@/lib/webhook';
 import { assignRecruiter } from '@/lib/recruiters';
 
-const TOTAL_VISIBLE_STEPS = 12;
 const SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutos
+
+// Helper: avanza desde `from` saltando los steps no aplicables a la empresa.
+function nextApplicableStep(from: number, company: Company): number {
+  const skipped = getSkippedSteps(company);
+  let n = from;
+  while (skipped.has(n)) n++;
+  return n;
+}
 
 // ─── localStorage helpers (cache local) ──────────────────────────────────────
 
@@ -43,6 +53,9 @@ export default function Evaluate() {
   const name = searchParams.get('name') || '';
   const phone = searchParams.get('phone') || '';
   const recruiter = searchParams.get('recruiter') || '';
+  const companyParam = (searchParams.get('company') || '').toLowerCase();
+  const company: Company =
+    companyParam === 'trebolife' || companyParam === 'traduce' ? companyParam : null;
 
   const { t, lang } = useLanguage();
   const [state, setState] = useState<EvaluationState | null>(null);
@@ -87,14 +100,16 @@ export default function Evaluate() {
     }
 
     // Sesión nueva
-    const initial = createInitialState(name, phone);
+    const initial = createInitialState(name, phone, company);
     if (recruiter) initial.assignedTo = recruiter;
     localStorage.setItem(sessionKey, initial.sessionId);
     saveLocal(initial);
     setState(initial);
+    // Para Trebolife saltamos el welcome screen — el copy ya viene en la landing.
+    if (company === 'trebolife') setShowWelcome(false);
     // Crear registro en Supabase (fire and forget)
     syncToSupabase(initial);
-  }, [name, phone, navigate]);
+  }, [name, phone, company, navigate]);
 
   const handleStart = () => {
     setShowWelcome(false);
@@ -216,14 +231,35 @@ export default function Evaluate() {
         break;
       }
 
+      case 11: { // Financial (legacy) | Ramp-up (Trebolife)
+        if (state.company === 'trebolife') {
+          const result = scoreRampUp(data.rampUpExpectation);
+          updated.scores = { ...updated.scores, Ramp1_velocidad: result.score };
+          if (result.disqualify) {
+            handleDisqualify('sin_ramp_up');
+            return;
+          }
+        } else {
+          // Legacy financial flow ya descalifica vía onDisqualify desde el step component.
+        }
+        break;
+      }
+
+      case 12: { // PreReg (legacy) | ChurnResistance (Trebolife)
+        // ChurnResistance es texto libre; se guarda en answers para que la
+        // reclutadora lo vea, pero no genera score automático en esta fase.
+        // (Pendiente: scoring LLM en Fase 2.D si se valida que aporta señal.)
+        break;
+      }
+
       case 13: { // CV — paso final
         setIsSaving(true);
         updated.totalScore = calculateTotalScore(updated);
         updated.status = calculateFinalStatus(updated);
         updated.completedAt = new Date().toISOString();
 
-        // Asignar reclutador si el candidato calificó o es potencial (para seguimiento manual)
-        if (updated.status === 'elite' || updated.status === 'calificado' || updated.status === 'potencial') {
+        // Asignar reclutador si calificó (eliminada categoría "potencial" — ya no llega aquí)
+        if (updated.status === 'elite' || updated.status === 'calificado') {
           const assignment = await assignRecruiter();
           if (assignment) {
             updated.assignedTo  = assignment.label;
@@ -249,8 +285,8 @@ export default function Evaluate() {
       }
     }
 
-    // Avanzar al siguiente paso
-    updated.currentStep = step + 1;
+    // Avanzar al siguiente paso, saltando los no aplicables a la empresa
+    updated.currentStep = nextApplicableStep(step + 1, state.company);
     updated.totalScore = calculateTotalScore(updated);
     setState(updated);
     saveLocal(updated);
@@ -329,8 +365,18 @@ export default function Evaluate() {
 
   // ─── Flujo de evaluación ─────────────────────────────────────────────────────
 
-  const progressStep = Math.min(state.currentStep + 1, TOTAL_VISIBLE_STEPS);
-  const showProgress = state.currentStep < 12;
+  const totalVisibleSteps = getTotalVisibleSteps(state.company);
+  // Cuenta cuántos steps NO saltados ya quedaron atrás → posición real en la barra
+  const skipped = getSkippedSteps(state.company);
+  const visibleStepsBefore = (() => {
+    let count = 0;
+    for (let s = 0; s < state.currentStep; s++) {
+      if (!skipped.has(s)) count++;
+    }
+    return count;
+  })();
+  const progressStep = Math.min(visibleStepsBefore + 1, totalVisibleSteps);
+  const showProgress = state.currentStep < 13;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -341,12 +387,12 @@ export default function Evaluate() {
           {showProgress && (
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground">
-                {t('step_progress', { step: progressStep, total: TOTAL_VISIBLE_STEPS })}
+                {t('step_progress', { step: progressStep, total: totalVisibleSteps })}
               </span>
               <div className="w-24 sm:w-32 h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full gold-gradient rounded-full transition-all duration-500"
-                  style={{ width: `${(progressStep / TOTAL_VISIBLE_STEPS) * 100}%` }}
+                  style={{ width: `${(progressStep / totalVisibleSteps) * 100}%` }}
                 />
               </div>
             </div>

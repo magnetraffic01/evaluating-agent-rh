@@ -1,36 +1,66 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Company } from '@/types/evaluation';
 
 interface Props {
   name: string;
   onNext: (data: Record<string, any>) => void;
   onDisqualify: (reason: string) => void;
+  company: Company;
 }
 
-export default function BasicInfoStep({ name, onNext, onDisqualify }: Props) {
+export default function BasicInfoStep({ name, onNext, onDisqualify, company }: Props) {
   const { t } = useLanguage();
   const [location, setLocation] = useState('');
   const [availability, setAvailability] = useState('');
+  const [email, setEmail] = useState('');
 
-  const handleSubmit = () => {
+  const isTrebolife = company === 'trebolife';
+
+  const isEmailValid = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+
+  // Trebolife: 40h+ es la cuota mínima (5 ventas/día requiere FT real).
+  const availabilityOptions = isTrebolife
+    ? [
+        { value: 'more_40', label: t('basic_more40') },
+        { value: 'less_40', label: t('basic_less40') },
+      ]
+    : [
+        { value: 'more_30', label: t('basic_more30') },
+        { value: 'less_30', label: t('basic_less30') },
+      ];
+
+  // Para Trebolife usamos un texto distinto que ya menciona 40h y email.
+  const description = isTrebolife
+    ? t('basic_description_trebolife', { name })
+    : t('basic_description', { name });
+
+  const disqualifyValue = isTrebolife ? 'less_40' : 'less_30';
+  const submitDisabled =
+    !location.trim() ||
+    !availability ||
+    (isTrebolife && !isEmailValid(email));
+
+  const handleClick = () => {
     if (!location.trim() || !availability) return;
-    if (availability === 'less_30') {
+    if (isTrebolife && !isEmailValid(email)) return;
+    if (availability === disqualifyValue) {
       onDisqualify('sin_disponibilidad');
       return;
     }
-    onNext({ location: location.trim(), availability });
+    const payload: Record<string, any> = {
+      location: location.trim(),
+      availability,
+    };
+    if (isTrebolife) payload.email = email.trim();
+    onNext(payload);
   };
-
-  const availabilityOptions = [
-    { value: 'more_30', label: t('basic_more30') },
-    { value: 'less_30', label: t('basic_less30') },
-  ];
 
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
       <h2 className="text-xl font-bold text-foreground mb-4">{t('basic_title')}</h2>
       <p className="text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
-        {t('basic_description', { name })}
+        {description}
       </p>
 
       <div className="space-y-5">
@@ -46,6 +76,21 @@ export default function BasicInfoStep({ name, onNext, onDisqualify }: Props) {
             className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>
+
+        {isTrebolife && (
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              {t('basic_email_label')}
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t('basic_email_placeholder')}
+              className="w-full bg-input border border-border rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-3">
@@ -88,8 +133,8 @@ export default function BasicInfoStep({ name, onNext, onDisqualify }: Props) {
       </div>
 
       <button
-        onClick={handleSubmit}
-        disabled={!location.trim() || !availability}
+        onClick={handleClick}
+        disabled={submitDisabled}
         className="mt-6 w-full gold-gradient text-primary-foreground font-semibold py-3 px-6 rounded-full transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {t('continue')}

@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Company } from '@/types/evaluation';
 
 interface Props {
   onNext: (data: Record<string, any>) => void;
+  company: Company;
 }
 
-export default function ExperienceStep({ onNext }: Props) {
+export default function ExperienceStep({ onNext, company }: Props) {
   const { t } = useLanguage();
   const [experience, setExperience] = useState('');
+
+  const isTrebolife = company === 'trebolife';
+  const description = isTrebolife ? t('exp_description_trebolife') : t('exp_description');
 
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
       <h2 className="text-xl font-bold text-foreground mb-4">{t('exp_title')}</h2>
-      <p className="text-muted-foreground leading-relaxed mb-6">{t('exp_description')}</p>
+      <p className="text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">{description}</p>
       <textarea
         value={experience}
         onChange={(e) => setExperience(e.target.value)}

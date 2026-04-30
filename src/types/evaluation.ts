@@ -1,7 +1,10 @@
+export type Company = 'trebolife' | 'traduce' | null;
+
 export interface EvaluationState {
   sessionId: string;
   name: string;
   phone: string;
+  company: Company;
   currentStep: number;
   startTime: string;
   completedAt?: string;
@@ -23,6 +26,9 @@ export interface EvaluationState {
   verificationAnswer: string;
   jobCount: string;
   financialSituation: string;
+  // Trebolife-specific (also reused for future companies)
+  rampUpExpectation: string;
+  churnPrevention: string;
   email: string;
   age: number | null;
   maritalStatus: string;
@@ -50,6 +56,7 @@ export interface ScoreBreakdown {
   C1_estabilidad: number;
   V1_penalty: number;
   E2_penalty: number;
+  Ramp1_velocidad: number;  // velocidad de ramp-up para llegar a cuota (Trebolife)
 }
 
 export interface EvaluationFlags {
@@ -70,15 +77,37 @@ export const DISQUALIFY_REASONS: Record<string, string> = {
   'sin_copywriting': 'habilidades de seguimiento activo',
   'sin_objeciones': 'técnicas de manejo de objeciones',
   'sin_runway': 'estabilidad durante el período de arranque',
+  'sin_ramp_up': 'velocidad de arranque para cumplir cuota desde el primer mes',
   'no_envio_cv': 'documentación completa del perfil',
 };
 
-export function createInitialState(name: string, phone: string): EvaluationState {
+// Pasos que se SALTAN para cada empresa (referenciados por índice en el flujo legacy).
+// Trebolife: skip Consent(0), Philosophy(8), Verification(9), PreReg(12 — reemplazado por Churn)
+export const SKIPPED_STEPS_BY_COMPANY: Record<string, Set<number>> = {
+  trebolife: new Set([0, 8, 9, 12]),
+  traduce: new Set([]), // pendiente Fase 2.C-Traduce
+};
+
+export function getSkippedSteps(company: Company): Set<number> {
+  if (!company) return new Set();
+  return SKIPPED_STEPS_BY_COMPANY[company] ?? new Set();
+}
+
+// Total de pasos visibles en el progress bar (para Trebolife: 10 visibles + Churn = 11)
+export function getTotalVisibleSteps(company: Company): number {
+  if (company === 'trebolife') return 11;
+  return 12; // legacy
+}
+
+export function createInitialState(name: string, phone: string, company: Company = null): EvaluationState {
+  // Trebolife flow skips Consent (step 0) — arrancamos directo en BasicInfo (step 1).
+  const startStep = company === 'trebolife' ? 1 : 0;
   return {
     sessionId: crypto.randomUUID(),
     name,
     phone,
-    currentStep: 0,
+    company,
+    currentStep: startStep,
     startTime: new Date().toISOString(),
     location: '',
     availability: '',
@@ -96,6 +125,8 @@ export function createInitialState(name: string, phone: string): EvaluationState
     verificationAnswer: '',
     jobCount: '',
     financialSituation: '',
+    rampUpExpectation: '',
+    churnPrevention: '',
     email: '',
     age: null,
     maritalStatus: '',
@@ -113,6 +144,7 @@ export function createInitialState(name: string, phone: string): EvaluationState
       C1_estabilidad: 0,
       V1_penalty: 0,
       E2_penalty: 0,
+      Ramp1_velocidad: 0,
     },
     totalScore: 0,
     flags: {
