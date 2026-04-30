@@ -1,8 +1,13 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare } from 'lucide-react';
+import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare, TrendingUp } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
-import { useAdmin, AdminEvaluation, updateInterviewData } from '@/hooks/useAdmin';
+import { useAdmin, AdminEvaluation, updateInterviewData, useBriefing, useUpdateHiredStatus, fetchEvaluationDetail } from '@/hooks/useAdmin';
+import { BriefingCard } from '@/components/admin/BriefingCard';
+import { LLMResponseCard } from '@/components/admin/LLMResponseCard';
+import { HiredStatusButtons } from '@/components/admin/HiredStatusButtons';
+import { AnalyticsPanel } from '@/components/admin/AnalyticsPanel';
+import { toast } from 'sonner';
 import {
   auth as apiAuth,
   recruiters as apiRecruiters,
@@ -10,6 +15,7 @@ import {
   API_BASE_URL,
   type AdminUser,
   type Recruiter as ApiRecruiter,
+  type HiredStatus,
 } from '@/lib/api';
 
 // Sesión admin (forma minimal — reemplaza al `Session` de Supabase).
@@ -242,21 +248,79 @@ function normalizeRecruiter(value: string | null | undefined): string | null {
 
 // ─── Modal de detalle ─────────────────────────────────────────────────────────
 
-type ModalTab = 'resumen' | 'qa' | 'score' | 'entrevista';
+type ModalTab = 'resumen' | 'qa' | 'score' | 'entrevista' | 'candidato';
 
-function DetailModal({ candidate, onClose, onUpdate }: {
+/** Extended candidate shape used only inside the modal (Phase 3 fields). */
+interface AdminEvaluationExt extends AdminEvaluation {
+  briefing_summary?: string | null;
+  briefing_questions?: string[] | null;
+  briefing_flags?: { green: string[]; red: string[] } | null;
+  hired_status?: HiredStatus;
+  hired_notes?: string | null;
+  company?: string | null;
+  device_type?: string | null;
+}
+
+function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
   candidate: AdminEvaluation;
   onClose: () => void;
   onUpdate: (updated: Partial<AdminEvaluation>) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<ModalTab>('resumen');
-  const [interviewStatus, setInterviewStatus] = useState(candidate.interview_status || '');
+  const [activeTab, setActiveTab] = useState<ModalTab>('candidato');
+  const [interviewStatus, setInterviewStatus] = useState(candidateProp.interview_status || '');
   const [interviewDate, setInterviewDate]     = useState(
-    candidate.interview_date ? candidate.interview_date.slice(0, 16) : ''
+    candidateProp.interview_date ? candidateProp.interview_date.slice(0, 16) : ''
   );
-  const [recruiterNotes, setRecruiterNotes]   = useState(candidate.recruiter_notes || '');
-  const [assignedTo, setAssignedTo]           = useState(candidate.assigned_to || '');
+  const [recruiterNotes, setRecruiterNotes]   = useState(candidateProp.recruiter_notes || '');
+  const [assignedTo, setAssignedTo]           = useState(candidateProp.assigned_to || '');
   const [saving, setSaving] = useState(false);
+
+  // Full candidate detail (includes Phase 3 fields)
+  const [candidate, setCandidate] = useState<AdminEvaluationExt>(candidateProp);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Load full detail on mount to get Phase 3 fields + answers
+  useEffect(() => {
+    let cancelled = false;
+    setDetailLoading(true);
+    fetchEvaluationDetail(candidateProp.id)
+      .then(full => { if (!cancelled) setCandidate(full as AdminEvaluationExt); })
+      .catch(() => { /* tolerate — use candidateProp as fallback */ })
+      .finally(() => { if (!cancelled) setDetailLoading(false); });
+    return () => { cancelled = true; };
+  }, [candidateProp.id]);
+
+  // Briefing hook — seeded with whatever the full detail carries
+  const {
+    briefing,
+    loading: briefingLoading,
+    error: briefingError,
+    generate: generateBriefing,
+    setBriefing,
+  } = useBriefing(
+    candidate.id,
+    {
+      summary:   candidate.briefing_summary,
+      questions: candidate.briefing_questions,
+      flags:     candidate.briefing_flags,
+    }
+  );
+
+  // Sync briefing state when detail loads
+  useEffect(() => {
+    if (candidate.briefing_summary) {
+      setBriefing({
+        summary:   candidate.briefing_summary!,
+        questions: candidate.briefing_questions ?? [],
+        flags:     candidate.briefing_flags ?? { green: [], red: [] },
+      });
+    }
+  }, [candidate.briefing_summary, candidate.briefing_questions, candidate.briefing_flags, setBriefing]);
+
+  // Hired status local state
+  const [hiredStatus, setHiredStatus] = useState<HiredStatus>(
+    (candidate.hired_status as HiredStatus) ?? null
+  );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -267,10 +331,13 @@ function DetailModal({ candidate, onClose, onUpdate }: {
     assigned_to?: string;
   }) => {
     setSaving(true);
-    await updateInterviewData(candidate.id, patch);
+    const result = await updateInterviewData(candidateProp.id, patch);
+    if (result.error) {
+      toast.error(`Error al guardar: ${result.error}`);
+    }
     onUpdate(patch);
     setSaving(false);
-  }, [candidate.id, onUpdate]);
+  }, [candidateProp.id, onUpdate]);
 
   const handleStatusChange = (val: string) => {
     setInterviewStatus(val);
@@ -306,7 +373,23 @@ function DetailModal({ candidate, onClose, onUpdate }: {
   const summary = buildSummary(candidate);
   const hasAnswers = candidate.answers && Object.values(candidate.answers).some(v => v);
 
+  // LLM response fields from answers
+  const answers = candidate.answers as Record<string, string> | null;
+  const reactivationMsg     = answers?.reactivationMsg ?? answers?.highlight ?? candidate.highlight;
+  const reactivationReason  = answers?.reactivationReasoning ?? null;
+  const objectionResponse   = answers?.objectionResponse ?? null;
+  const objectionReasoning  = answers?.objectionReasoning ?? null;
+  const autonomyDesc        = answers?.autonomyDesc ?? null;
+  const autonomyReasoning   = answers?.autonomyReasoning ?? null;
+
+  // Scores from score_breakdown
+  const sb = candidate.score_breakdown ?? {};
+  const reactivationScore = (sb.E3_copywriting as number) ?? 0;
+  const objectionScore    = (sb.E4_objeciones as number) ?? 0;
+  const autonomyScore     = (sb.E5_autonomia as number) ?? 0;
+
   const TABS: { id: ModalTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'candidato',  label: 'Candidato',  icon: <User size={14} />        },
     { id: 'resumen',    label: 'Resumen',    icon: <FileText size={14} />    },
     { id: 'qa',         label: 'Respuestas', icon: <MessageSquare size={14} /> },
     { id: 'score',      label: 'Evaluación', icon: <BarChart2 size={14} />   },
@@ -391,6 +474,91 @@ function DetailModal({ candidate, onClose, onUpdate }: {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-5 print:overflow-visible">
+
+          {/* ── TAB: CANDIDATO (Phase 3) ── */}
+          {activeTab === 'candidato' && (
+            <div className="space-y-5">
+              {/* Loading detail */}
+              {detailLoading && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                  Cargando detalle completo...
+                </div>
+              )}
+
+              {/* Meta: device, company */}
+              {(candidate.company || candidate.device_type) && (
+                <div className="flex items-center flex-wrap gap-2 text-xs text-muted-foreground">
+                  {candidate.company && (
+                    <span className="px-2 py-1 rounded-full bg-muted/20 border border-border/40">
+                      {candidate.company}
+                    </span>
+                  )}
+                  {candidate.device_type && (
+                    <span className="px-2 py-1 rounded-full bg-muted/20 border border-border/40">
+                      {candidate.device_type === 'mobile' ? 'Movil' : candidate.device_type === 'desktop' ? 'Desktop' : candidate.device_type}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Briefing Card */}
+              <BriefingCard
+                summary={briefing?.summary ?? null}
+                questions={briefing?.questions ?? null}
+                flags={briefing?.flags ?? null}
+                generating={briefingLoading}
+                error={briefingError}
+                onGenerate={generateBriefing}
+                canGenerate={true}
+              />
+
+              {/* LLM Responses */}
+              {(reactivationMsg || objectionResponse || autonomyDesc) && (
+                <div className="space-y-3">
+                  <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider">
+                    Respuestas LLM-evaluadas
+                  </h4>
+                  <LLMResponseCard
+                    icon="📨"
+                    label="Reactivacion"
+                    score={reactivationScore}
+                    maxScore={20}
+                    response={reactivationMsg}
+                    reasoning={reactivationReason}
+                    highlight={candidate.highlight}
+                  />
+                  <LLMResponseCard
+                    icon="💬"
+                    label="Manejo de objecion"
+                    score={objectionScore}
+                    maxScore={20}
+                    response={objectionResponse}
+                    reasoning={objectionReasoning}
+                  />
+                  <LLMResponseCard
+                    icon="🔧"
+                    label="Autonomia"
+                    score={autonomyScore}
+                    maxScore={15}
+                    response={autonomyDesc}
+                    reasoning={autonomyReasoning}
+                  />
+                </div>
+              )}
+
+              {/* Hired Status Buttons */}
+              <HiredStatusButtons
+                evaluationId={candidate.id}
+                currentStatus={hiredStatus}
+                onStatusChange={(status, notes) => {
+                  setHiredStatus(status);
+                  setCandidate(prev => ({ ...prev, hired_status: status, hired_notes: notes }));
+                  onUpdate({ hired_status: status } as Partial<AdminEvaluation>);
+                }}
+              />
+            </div>
+          )}
 
           {/* ── TAB: RESUMEN ── */}
           {(activeTab === 'resumen') && (
@@ -995,7 +1163,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
 export default function Admin() {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores'>('candidatos');
+  const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores' | 'analytics'>('candidatos');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [recruiterFilter, setRecruiterFilter] = useState<string>('all');
@@ -1141,20 +1309,28 @@ export default function Admin() {
 
         {/* Tab switcher */}
         <div className="flex gap-2 border-b border-border pb-0">
-          {(['candidatos', 'reclutadores'] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2.5 text-sm font-medium capitalize transition-all border-b-2 -mb-px ${
+          {([
+            ['candidatos',  'Candidatos',   null],
+            ['reclutadores','Reclutadores', null],
+            ['analytics',   'Analytics',    <TrendingUp size={14} key="a" />],
+          ] as [string, string, React.ReactNode][]).map(([tab, label, icon]) => (
+            <button key={tab} onClick={() => setActiveTab(tab as 'candidatos' | 'reclutadores' | 'analytics')}
+              className={`flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium capitalize transition-all border-b-2 -mb-px ${
                 activeTab === tab
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}>
-              {tab === 'candidatos' ? 'Candidatos' : 'Reclutadores'}
+              {icon}{label}
             </button>
           ))}
         </div>
 
         {activeTab === 'reclutadores' && (
           <RecruiterPanel />
+        )}
+
+        {activeTab === 'analytics' && (
+          <AnalyticsPanel />
         )}
 
         {activeTab === 'candidatos' && (<>

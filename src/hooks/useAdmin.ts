@@ -3,7 +3,17 @@
 // Migrado a backend Express+MySQL via `@/lib/api`.
 
 import { useState, useEffect, useCallback } from 'react';
-import { evaluations as apiEvaluations, ApiError, type EvaluationListItem } from '@/lib/api';
+import {
+  evaluations as apiEvaluations,
+  briefing as apiBriefing,
+  hiredStatus as apiHiredStatus,
+  analytics as apiAnalytics,
+  ApiError,
+  type EvaluationListItem,
+  type BriefingResponse,
+  type HiredStatus,
+  type FunnelAnalytics,
+} from '@/lib/api';
 
 export interface AdminEvaluation {
   id: string;
@@ -136,4 +146,98 @@ export async function fetchEvaluationDetail(id: string): Promise<AdminEvaluation
     current_step:    data.current_step ?? 0,
     last_activity:   data.last_activity ?? data.created_at,
   } as AdminEvaluation;
+}
+
+// ─── Phase 3 hooks ────────────────────────────────────────────────────────────
+
+/**
+ * Hook to generate or use existing briefing for a candidate.
+ * Returns the briefing state and a generate function.
+ */
+export function useBriefing(
+  evaluationId: string | null,
+  initial?: { summary?: string | null; questions?: string[] | null; flags?: { green: string[]; red: string[] } | null }
+) {
+  const [briefing, setBriefing] = useState<BriefingResponse | null>(
+    initial?.summary
+      ? { summary: initial.summary, questions: initial.questions ?? [], flags: initial.flags ?? { green: [], red: [] } }
+      : null
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const generate = useCallback(async () => {
+    if (!evaluationId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiBriefing.generate(evaluationId);
+      setBriefing(res);
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [evaluationId]);
+
+  return { briefing, loading, error, generate, setBriefing };
+}
+
+/**
+ * Hook to update the hired status of a candidate.
+ */
+export function useUpdateHiredStatus() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const update = useCallback(async (
+    evaluationId: string,
+    status: HiredStatus,
+    notes?: string | null
+  ): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiHiredStatus.update(evaluationId, { hired_status: status, hired_notes: notes });
+      return true;
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      setError(msg);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { update, loading, error };
+}
+
+/**
+ * Hook to load funnel analytics.
+ */
+export function useFunnel(company?: string) {
+  const [data, setData] = useState<FunnelAnalytics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiAnalytics.funnel(company);
+      setData(res);
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [company]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { data, loading, error, refetch: fetch };
 }

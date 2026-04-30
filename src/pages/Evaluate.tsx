@@ -20,6 +20,7 @@ import {
 import { syncToSupabase, completeInSupabase } from '@/hooks/useSession';
 import { sendWebhook } from '@/lib/webhook';
 import { assignRecruiter } from '@/lib/recruiters';
+import { useStepTracking } from '@/hooks/useStepTracking';
 
 const SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutos
 
@@ -61,6 +62,7 @@ export default function Evaluate() {
   const [state, setState] = useState<EvaluationState | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const { startStep, endStepAndReport } = useStepTracking();
 
   // Anti-retroceso del navegador
   useEffect(() => {
@@ -71,6 +73,12 @@ export default function Evaluate() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Step timer — arranca cuando cambia el step actual
+  useEffect(() => {
+    if (!state || showWelcome) return;
+    startStep(state.currentStep);
+  }, [state?.currentStep, showWelcome]);
 
   // Inicialización de sesión
   useEffect(() => {
@@ -142,9 +150,10 @@ export default function Evaluate() {
     // Notificar a GoHighLevel (fire and forget)
     sendWebhook(updated);
 
+    endStepAndReport(state.currentStep, state.sessionId);
     setIsSaving(false);
     navigate(`/result/${updated.sessionId}`);
-  }, [state, navigate]);
+  }, [state, navigate, endStepAndReport]);
 
   // ─── Avanzar paso ───────────────────────────────────────────────────────────
 
@@ -279,11 +288,14 @@ export default function Evaluate() {
         }
 
         // Navegar siempre — el resultado ya está en localStorage
+        endStepAndReport(13, state.sessionId);
         setIsSaving(false);
         navigate(`/result/${updated.sessionId}`);
         return;
       }
     }
+
+    endStepAndReport(step, state.sessionId);
 
     // Avanzar al siguiente paso, saltando los no aplicables a la empresa
     updated.currentStep = nextApplicableStep(step + 1, state.company);
@@ -293,7 +305,7 @@ export default function Evaluate() {
 
     // Sync con Supabase en background (no bloquea la UI)
     syncToSupabase(updated);
-  }, [state, isSaving, navigate, handleDisqualify]);
+  }, [state, isSaving, navigate, handleDisqualify, endStepAndReport]);
 
   // ─── Guard: parámetros inválidos ────────────────────────────────────────────
 

@@ -442,3 +442,95 @@ const apiClient = {
 };
 
 export default apiClient;
+
+// ─── Briefing / Hired / Admin Analytics (Phase 3 - Agent B) ───
+
+/** Extended evaluation type with Phase 3 fields. Extends base `Evaluation` — do NOT modify `Evaluation` above. */
+export interface EvaluationFull extends Evaluation {
+  briefing_summary: string | null;
+  briefing_questions: string[] | null;
+  briefing_flags: { green: string[]; red: string[] } | null;
+  hired_status: 'hired' | 'declined' | 'no_show' | null;
+  hired_at: string | null;
+  hired_notes: string | null;
+  device_type: 'mobile' | 'desktop' | 'tablet' | null;
+  step_durations: Record<string, number> | null;
+  company: 'trebolife' | 'traduce' | null;
+}
+
+export interface BriefingResponse {
+  summary: string;
+  questions: string[];
+  flags: { green: string[]; red: string[] };
+}
+
+export type HiredStatus = 'hired' | 'declined' | 'no_show' | null;
+
+export interface HiredStatusUpdateBody {
+  hired_status: HiredStatus;
+  hired_notes?: string | null;
+}
+
+export interface FunnelAnalytics {
+  total: number;
+  by_step: Record<string, number>;
+  by_status: Record<string, number>;
+  by_device: Record<string, number>;
+  avg_step_duration: Record<string, number>;
+}
+
+export interface AbandonedRow {
+  id: string;
+  session_id: string;
+  name: string;
+  phone: string;
+  current_step: number;
+  last_activity: string;
+  created_at: string;
+}
+
+export interface AbandonedResponse {
+  rows: AbandonedRow[];
+  total: number;
+}
+
+export const briefing = {
+  generate(evaluation_id: string): Promise<BriefingResponse> {
+    return api.post<BriefingResponse>('/api/hr/briefing/generate', { evaluation_id });
+  },
+};
+
+export const hiredStatus = {
+  update(id: string, body: HiredStatusUpdateBody): Promise<{ ok: true }> {
+    return api.patch<{ ok: true }>(`/api/hr/evaluations/${encodeURIComponent(id)}/hired-status`, body);
+  },
+};
+
+export const analytics = {
+  funnel(company?: string): Promise<FunnelAnalytics> {
+    const q = company ? `?company=${encodeURIComponent(company)}` : '';
+    return api.get<FunnelAnalytics>(`/api/hr/analytics/funnel${q}`);
+  },
+  abandoned(hours = 24): Promise<AbandonedResponse> {
+    return api.get<AbandonedResponse>(`/api/hr/analytics/abandoned?hours=${hours}`);
+  },
+};
+
+// ─── Step tracking + briefing trigger (Phase 3 - Agent C) ───
+
+export interface StepEventPayload {
+  session_id: string;
+  step: number;
+  duration_seconds: number;
+  device_type?: 'mobile' | 'desktop' | 'tablet';
+}
+
+export const tracking = {
+  stepEvent(payload: StepEventPayload) {
+    return api.post<{ ok: true; ignored?: boolean }>(
+      '/api/hr/analytics/step-event',
+      payload,
+      { anonymous: true },
+    );
+  },
+};

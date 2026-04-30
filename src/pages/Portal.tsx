@@ -5,6 +5,10 @@ import {
   ChevronDown, ExternalLink, User,
 } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
+import { BriefingCard } from '@/components/admin/BriefingCard';
+import { LLMResponseCard } from '@/components/admin/LLMResponseCard';
+import { useBriefing, fetchEvaluationDetail, type AdminEvaluation } from '@/hooks/useAdmin';
+import { ApiError as _ApiError } from '@/lib/api';
 import {
   auth as apiAuth,
   evaluations as apiEvaluations,
@@ -74,9 +78,101 @@ const INTERVIEW_STATUS_CONFIG: Record<string, { label: string; color: string }> 
 
 // ─── Modal de detalle ─────────────────────────────────────────────────────────
 
-function CandidateModal({ ev, onClose }: { ev: PortalEvaluation; onClose: () => void }) {
-  const cfg = STATUS_CONFIG[ev.status] || STATUS_CONFIG.descartado;
-  const intCfg = ev.interview_status ? INTERVIEW_STATUS_CONFIG[ev.interview_status] : null;
+/** Extended shape inside the portal modal that may carry Phase 3 fields. */
+interface PortalEvaluationExt extends PortalEvaluation {
+  briefing_summary?: string | null;
+  briefing_questions?: string[] | null;
+  briefing_flags?: { green: string[]; red: string[] } | null;
+  answers?: Record<string, string> | null;
+  score_breakdown?: Record<string, number> | null;
+  highlight?: string | null;
+}
+
+function CandidateModal({ ev: evProp, onClose }: { ev: PortalEvaluation; onClose: () => void }) {
+  const cfg = STATUS_CONFIG[evProp.status] || STATUS_CONFIG.descartado;
+  const intCfg = evProp.interview_status ? INTERVIEW_STATUS_CONFIG[evProp.interview_status] : null;
+
+  // Load full detail (Phase 3 fields)
+  const [ev, setEv] = useState<PortalEvaluationExt>(evProp);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Use the id from the list item (may differ from session_id)
+    const listEv = evProp as PortalEvaluation & { id?: string };
+    const idToFetch = listEv.id ?? evProp.session_id;
+    setDetailLoading(true);
+    fetchEvaluationDetail(idToFetch)
+      .then((full: AdminEvaluation) => {
+        if (!cancelled) {
+          setEv(prev => ({
+            ...prev,
+            briefing_summary:   (full as PortalEvaluationExt).briefing_summary,
+            briefing_questions: (full as PortalEvaluationExt).briefing_questions,
+            briefing_flags:     (full as PortalEvaluationExt).briefing_flags,
+            answers:            full.answers as Record<string, string> | null,
+            score_breakdown:    full.score_breakdown as Record<string, number> | null,
+            highlight:          full.highlight,
+          }));
+        }
+      })
+      .catch(() => { /* tolerate — fallback to list data */ })
+      .finally(() => { if (!cancelled) setDetailLoading(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evProp.session_id]);
+
+  // Briefing hook — recruiter can try to generate; 401 = hide button
+  const [canGenerate, setCanGenerate] = useState(true);
+  const {
+    briefing,
+    loading: briefingLoading,
+    error: briefingError,
+    generate: generateBriefingFn,
+    setBriefing,
+  } = useBriefing(
+    (evProp as PortalEvaluation & { id?: string }).id ?? evProp.session_id,
+    {
+      summary:   ev.briefing_summary,
+      questions: ev.briefing_questions,
+      flags:     ev.briefing_flags,
+    }
+  );
+
+  // Sync when full detail arrives
+  useEffect(() => {
+    if (ev.briefing_summary) {
+      setBriefing({
+        summary:   ev.briefing_summary!,
+        questions: ev.briefing_questions ?? [],
+        flags:     ev.briefing_flags ?? { green: [], red: [] },
+      });
+    }
+  }, [ev.briefing_summary, ev.briefing_questions, ev.briefing_flags, setBriefing]);
+
+  // Wrap generate to hide button on 401
+  const handleGenerate = async () => {
+    try {
+      await generateBriefingFn();
+    } catch (e) {
+      if (e instanceof _ApiError && e.status === 401) {
+        setCanGenerate(false);
+      }
+    }
+  };
+
+  // LLM fields
+  const answers = ev.answers ?? null;
+  const reactivationMsg    = answers?.reactivationMsg ?? answers?.highlight ?? ev.highlight ?? null;
+  const reactivationReason = answers?.reactivationReasoning ?? null;
+  const objectionResponse  = answers?.objectionResponse ?? null;
+  const objectionReasoning = answers?.objectionReasoning ?? null;
+  const autonomyDesc       = answers?.autonomyDesc ?? null;
+  const autonomyReasoning  = answers?.autonomyReasoning ?? null;
+  const sb = ev.score_breakdown ?? {};
+  const reactivationScore  = (sb.E3_copywriting as number) ?? 0;
+  const objectionScore     = (sb.E4_objeciones as number) ?? 0;
+  const autonomyScore      = (sb.E5_autonomia as number) ?? 0;
 
   return (
     <motion.div
@@ -116,6 +212,15 @@ function CandidateModal({ ev, onClose }: { ev: PortalEvaluation; onClose: () => 
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-4">
+          {/* Loading indicator */}
+          {detailLoading && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
+              Cargando datos completos...
+            </div>
+          )}
+
+          {/* Basic data grid */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-muted/20 rounded-xl p-4 text-sm">
             {([
               ['Teléfono',        ev.phone],
@@ -133,6 +238,51 @@ function CandidateModal({ ev, onClose }: { ev: PortalEvaluation; onClose: () => 
               </div>
             ))}
           </div>
+
+          {/* Briefing Card (concise, no hired buttons) */}
+          <BriefingCard
+            summary={briefing?.summary ?? null}
+            questions={briefing?.questions ?? null}
+            flags={briefing?.flags ?? null}
+            generating={briefingLoading}
+            error={briefingError}
+            onGenerate={handleGenerate}
+            canGenerate={canGenerate}
+          />
+
+          {/* LLM Responses */}
+          {(reactivationMsg || objectionResponse || autonomyDesc) && (
+            <div className="space-y-3">
+              <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider">
+                Respuestas LLM-evaluadas
+              </h4>
+              <LLMResponseCard
+                icon="📨"
+                label="Reactivacion"
+                score={reactivationScore}
+                maxScore={20}
+                response={reactivationMsg}
+                reasoning={reactivationReason}
+                highlight={ev.highlight ?? null}
+              />
+              <LLMResponseCard
+                icon="💬"
+                label="Manejo de objecion"
+                score={objectionScore}
+                maxScore={20}
+                response={objectionResponse}
+                reasoning={objectionReasoning}
+              />
+              <LLMResponseCard
+                icon="🔧"
+                label="Autonomia"
+                score={autonomyScore}
+                maxScore={15}
+                response={autonomyDesc}
+                reasoning={autonomyReasoning}
+              />
+            </div>
+          )}
 
           {ev.recruiter_notes && (
             <div>
