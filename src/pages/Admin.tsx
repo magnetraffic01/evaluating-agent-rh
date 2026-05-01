@@ -7,6 +7,8 @@ import { BriefingCard } from '@/components/admin/BriefingCard';
 import { LLMResponseCard } from '@/components/admin/LLMResponseCard';
 import { HiredStatusButtons } from '@/components/admin/HiredStatusButtons';
 import { AnalyticsPanel } from '@/components/admin/AnalyticsPanel';
+import { CompaniesPanel } from '@/components/admin/CompaniesPanel';
+import { RecruitersWithCompanies } from '@/components/admin/RecruitersWithCompanies';
 import { toast } from 'sonner';
 import {
   auth as apiAuth,
@@ -1163,7 +1165,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
 export default function Admin() {
   const [session, setSession] = useState<AdminSession | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores' | 'analytics'>('candidatos');
+  const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores' | 'empresas' | 'analytics'>('candidatos');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [recruiterFilter, setRecruiterFilter] = useState<string>('all');
@@ -1312,9 +1314,10 @@ export default function Admin() {
           {([
             ['candidatos',  'Candidatos',   null],
             ['reclutadores','Reclutadores', null],
+            ['empresas',    'Empresas',     null],
             ['analytics',   'Analytics',    <TrendingUp size={14} key="a" />],
           ] as [string, string, React.ReactNode][]).map(([tab, label, icon]) => (
-            <button key={tab} onClick={() => setActiveTab(tab as 'candidatos' | 'reclutadores' | 'analytics')}
+            <button key={tab} onClick={() => setActiveTab(tab as 'candidatos' | 'reclutadores' | 'empresas' | 'analytics')}
               className={`flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium capitalize transition-all border-b-2 -mb-px ${
                 activeTab === tab
                   ? 'border-primary text-primary'
@@ -1326,7 +1329,19 @@ export default function Admin() {
         </div>
 
         {activeTab === 'reclutadores' && (
-          <RecruiterPanel />
+          <div className="space-y-8">
+            <RecruiterPanel />
+            <div>
+              <h2 className="text-foreground font-semibold text-sm uppercase tracking-wider mb-4 border-t border-border/60 pt-6">
+                Asignación por Empresa
+              </h2>
+              <RecruitersWithCompanies />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'empresas' && (
+          <CompaniesPanel />
         )}
 
         {activeTab === 'analytics' && (

@@ -8,11 +8,15 @@ import {
   briefing as apiBriefing,
   hiredStatus as apiHiredStatus,
   analytics as apiAnalytics,
+  companies as apiCompanies,
+  recruiterCompanies as apiRecruiterCompanies,
   ApiError,
   type EvaluationListItem,
   type BriefingResponse,
   type HiredStatus,
   type FunnelAnalytics,
+  type Company,
+  type CompanyUpdate,
 } from '@/lib/api';
 
 export interface AdminEvaluation {
@@ -211,6 +215,90 @@ export function useUpdateHiredStatus() {
   }, []);
 
   return { update, loading, error };
+}
+
+// ─── Phase 5 hooks ────────────────────────────────────────────────────────────
+
+export { type Company, type CompanyUpdate };
+
+/**
+ * Fetches the list of companies with their distribution stats.
+ */
+export function useCompanies() {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [totalAssignedSum, setTotalAssignedSum] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiCompanies.list();
+      setCompanies(res.rows ?? []);
+      setTotalAssignedSum(res.total_assigned_sum ?? 0);
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { companies, totalAssignedSum, loading, error, refetch };
+}
+
+/**
+ * Returns a function to PATCH a single company (target_percent / active / name / notes).
+ */
+export function useUpdateCompany() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const update = useCallback(async (code: string, patch: CompanyUpdate): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiCompanies.update(code, patch);
+      return true;
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      setError(msg);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { update, loading, error };
+}
+
+/**
+ * Returns a function to PATCH the company memberships of a recruiter.
+ * body: `{ trebolife?: boolean, traduce?: boolean }`
+ */
+export function useUpdateRecruiterCompanies() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const setActive = useCallback(async (recruiterId: string, body: Record<string, boolean>): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiRecruiterCompanies.setActive(recruiterId, body);
+      return true;
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      setError(msg);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { setActive, loading, error };
 }
 
 /**

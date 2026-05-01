@@ -21,6 +21,7 @@ import { syncToSupabase, completeInSupabase } from '@/hooks/useSession';
 import { sendWebhook } from '@/lib/webhook';
 import { assignRecruiter } from '@/lib/recruiters';
 import { useStepTracking } from '@/hooks/useStepTracking';
+import { API_BASE_URL } from '@/lib/api';
 
 const SESSION_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutos
 
@@ -83,41 +84,61 @@ export default function Evaluate() {
   // Inicialización de sesión
   useEffect(() => {
     if (!name || !phone) return;
+    let cancelled = false;
 
-    const sessionKey = `eval_session_${phone}`;
-    const existingSessionId = localStorage.getItem(sessionKey);
+    (async () => {
+      const sessionKey = `eval_session_${phone}`;
+      const existingSessionId = localStorage.getItem(sessionKey);
 
-    if (existingSessionId) {
-      const saved = localStorage.getItem(`eval_${existingSessionId}`);
-      if (saved) {
-        const parsed = JSON.parse(saved) as EvaluationState;
-        const elapsed = Date.now() - new Date(parsed.startTime).getTime();
-        if (elapsed < SESSION_TIMEOUT_MS && parsed.status === 'en_progreso') {
-          // Sesión válida — reanudar
-          setState(parsed);
-          setShowWelcome(false);
-          // Sincronizar actividad con Supabase en background
-          syncToSupabase(parsed);
-          return;
-        } else if (elapsed >= SESSION_TIMEOUT_MS && parsed.status === 'en_progreso') {
-          // Sesión expirada
-          navigate('/expired');
-          return;
+      if (existingSessionId) {
+        const saved = localStorage.getItem(`eval_${existingSessionId}`);
+        if (saved) {
+          const parsed = JSON.parse(saved) as EvaluationState;
+          const elapsed = Date.now() - new Date(parsed.startTime).getTime();
+          if (elapsed < SESSION_TIMEOUT_MS && parsed.status === 'en_progreso') {
+            setState(parsed);
+            setShowWelcome(false);
+            syncToSupabase(parsed);
+            return;
+          } else if (elapsed >= SESSION_TIMEOUT_MS && parsed.status === 'en_progreso') {
+            navigate('/expired');
+            return;
+          }
         }
       }
-    }
 
-    // Sesión nueva
-    const initial = createInitialState(name, phone, company);
-    if (recruiter) initial.assignedTo = recruiter;
-    localStorage.setItem(sessionKey, initial.sessionId);
-    saveLocal(initial);
-    setState(initial);
-    // Para Trebolife saltamos el welcome screen — el copy ya viene en la landing.
-    if (company === 'trebolife') setShowWelcome(false);
-    // Crear registro en Supabase (fire and forget)
-    syncToSupabase(initial);
-  }, [name, phone, company, navigate]);
+      // Sesión nueva. Si NO viene company en la URL, decidirla server-side
+      // según las cuotas configuradas (FASE 5). Si viene en URL, respetar.
+      let resolvedCompany: Company = company;
+      if (!resolvedCompany) {
+        try {
+          const decided = await fetch(`${API_BASE_URL}/api/hr/companies/decide`, { method: 'POST' });
+          if (decided.ok) {
+            const data = await decided.json();
+            if (data?.company === 'trebolife' || data?.company === 'traduce') {
+              resolvedCompany = data.company;
+            }
+          }
+        } catch (_e) {
+          // Sin decide → cae al flujo legacy (sin company)
+        }
+      }
+      if (cancelled) return;
+
+      const initial = createInitialState(name, phone, resolvedCompany);
+      if (recruiter) initial.assignedTo = recruiter;
+      localStorage.setItem(sessionKey, initial.sessionId);
+      saveLocal(initial);
+      setState(initial);
+      // Trebolife (y Traduce cuando se configure) saltan el welcome screen.
+      if (resolvedCompany === 'trebolife' || resolvedCompany === 'traduce') {
+        setShowWelcome(false);
+      }
+      syncToSupabase(initial);
+    })();
+
+    return () => { cancelled = true; };
+  }, [name, phone, company, recruiter, navigate]);
 
   const handleStart = () => {
     setShowWelcome(false);
@@ -268,8 +289,9 @@ export default function Evaluate() {
         updated.completedAt = new Date().toISOString();
 
         // Asignar reclutador si calificó (eliminada categoría "potencial" — ya no llega aquí)
+        // Pasamos company para que el round-robin filtre por reclutadores que la atienden.
         if (updated.status === 'elite' || updated.status === 'calificado') {
-          const assignment = await assignRecruiter();
+          const assignment = await assignRecruiter(updated.company);
           if (assignment) {
             updated.assignedTo  = assignment.label;
             updated.calendarUrl = assignment.calendar_url;

@@ -369,8 +369,11 @@ export const evaluations = {
 };
 
 export const recruiters = {
-  assign() {
-    return api.post<RecruiterAssignment>('/api/hr/recruiters/assign', undefined, { anonymous: true });
+  // Phase 5: company filtra reclutadores que atienden esa empresa.
+  // null/undefined preserva comportamiento legacy.
+  assign(company?: 'trebolife' | 'traduce' | null) {
+    const body = company ? { company } : undefined;
+    return api.post<RecruiterAssignment>('/api/hr/recruiters/assign', body, { anonymous: true });
   },
   list() {
     return api.get<{ rows: Recruiter[] }>('/api/hr/recruiters');
@@ -541,6 +544,55 @@ export const tracking = {
       '/api/hr/analytics/step-event',
       payload,
       { anonymous: true },
+    );
+  },
+};
+
+// ─── Companies + recruiter-companies (Phase 5 - Agent) ───
+
+export interface Company {
+  code: string;
+  name: string;
+  active: boolean;
+  target_percent: number;
+  actual_percent: number;
+  total_assigned: number;
+  notes: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CompanyUpdate {
+  target_percent?: number;
+  active?: boolean;
+  name?: string;
+  notes?: string | null;
+}
+
+export interface RecruiterCompanyLink {
+  company: string;
+  active: boolean;
+  total_assigned: number;
+}
+
+export interface RecruiterFull extends Recruiter {
+  companies?: RecruiterCompanyLink[];
+}
+
+export const companies = {
+  list() {
+    return api.get<{ rows: Company[]; total_assigned_sum: number }>('/api/hr/companies');
+  },
+  update(code: string, patch: CompanyUpdate) {
+    return api.patch<{ ok: true }>(`/api/hr/companies/${encodeURIComponent(code)}`, patch);
+  },
+};
+
+export const recruiterCompanies = {
+  setActive(recruiterId: string, body: Record<string, boolean>) {
+    return api.patch<{ ok: true }>(
+      `/api/hr/recruiters/${encodeURIComponent(recruiterId)}/companies`,
+      body
     );
   },
 };
