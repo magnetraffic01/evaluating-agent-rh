@@ -89,7 +89,9 @@ export const DISQUALIFY_REASONS: Record<string, string> = {
 // sin renderear ChurnResistance, y churnPrevention quedaba vacío en DB.
 export const SKIPPED_STEPS_BY_COMPANY: Record<string, Set<number>> = {
   trebolife: new Set([0, 8, 9]),
-  traduce: new Set([]), // pendiente Fase 2.C-Traduce
+  // Traduce: same skips as Trebolife — Consent(0), Philosophy(8), Verification(9)
+  // Step 12 (ChurnResistance) is NOT skipped; it shows retention/recurrence question.
+  traduce: new Set([0, 8, 9]),
 };
 
 export function getSkippedSteps(company: Company): Set<number> {
@@ -98,14 +100,16 @@ export function getSkippedSteps(company: Company): Set<number> {
 }
 
 // Total de pasos visibles en el progress bar (para Trebolife: 10 visibles + Churn = 11)
+// Traduce mirrors Trebolife: same 11 visible steps, same skips.
 export function getTotalVisibleSteps(company: Company): number {
   if (company === 'trebolife') return 11;
+  if (company === 'traduce') return 11;
   return 12; // legacy
 }
 
 export function createInitialState(name: string, phone: string, company: Company = null): EvaluationState {
-  // Trebolife flow skips Consent (step 0) — arrancamos directo en BasicInfo (step 1).
-  const startStep = company === 'trebolife' ? 1 : 0;
+  // Trebolife and Traduce flows skip Consent (step 0) — start directly in BasicInfo (step 1).
+  const startStep = (company === 'trebolife' || company === 'traduce') ? 1 : 0;
   return {
     sessionId: crypto.randomUUID(),
     name,

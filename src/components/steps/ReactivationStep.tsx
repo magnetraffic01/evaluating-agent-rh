@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Company } from '@/types/evaluation';
 
 interface Props {
   onNext: (data: Record<string, any>) => void;
   onDisqualify: (reason: string) => void;
+  company: Company;
 }
 
-export default function ReactivationStep({ onNext, onDisqualify }: Props) {
+export default function ReactivationStep({ onNext, onDisqualify, company }: Props) {
   const { t } = useLanguage();
   const [msg, setMsg] = useState('');
+
+  const isTraduce = company === 'traduce';
 
   const handleSubmit = () => {
     if (msg.trim().length < 10) {
@@ -18,11 +22,13 @@ export default function ReactivationStep({ onNext, onDisqualify }: Props) {
     onNext({ reactivationMsg: msg });
   };
 
+  const description = isTraduce ? t('react_description_traduce') : t('react_description');
+
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
       <h2 className="text-xl font-bold text-foreground mb-4">{t('react_title')}</h2>
       <p className="text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
-        {t('react_description')}
+        {description}
       </p>
       <textarea
         value={msg}

@@ -467,6 +467,21 @@ export default function Evaluate() {
         </div>
       </main>
 
+      {/* Loader overlay durante steps async (LLM scoring ~8s).
+          Da feedback claro al candidato de que su respuesta se está
+          analizando — sin esto el botón "Continuar" parece colgado. */}
+      {isSaving && (state.currentStep === 5 || state.currentStep === 6 || state.currentStep === 7) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-auto">
+          <div className="glass-card rounded-xl p-8 max-w-sm text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+            <p className="text-foreground font-medium mb-2">{t('llm_analyzing_title')}</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">{t('llm_analyzing_subtitle')}</p>
+          </div>
+        </div>
+      )}
+
       <footer className="py-4 text-center text-xs text-muted-foreground/50">
         {t('footer_confidential')}
       </footer>

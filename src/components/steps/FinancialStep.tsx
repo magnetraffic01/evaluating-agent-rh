@@ -20,9 +20,11 @@ export default function FinancialStep({ onNext, onDisqualify, company }: Props) 
   const [answer, setAnswer] = useState('');
 
   const isTrebolife = company === 'trebolife';
+  const isTraduce = company === 'traduce';
+  const isRampUp = isTrebolife || isTraduce;
 
   const handleSubmit = () => {
-    if (isTrebolife) {
+    if (isRampUp) {
       // El scoring + posible descalificación se hacen en Evaluate.tsx
       // (caso 11) usando scoreRampUp(). Aquí solo enviamos la opción.
       onNext({ rampUpExpectation: answer });
@@ -43,13 +45,28 @@ export default function FinancialStep({ onNext, onDisqualify, company }: Props) 
         { value: 'month_2',      label: t('ramp_month_2') },
         { value: 'month_3_plus', label: t('ramp_month_3_plus') },
       ]
-    : [
-        { value: 'stable',     label: t('financial_stable') },
-        { value: 'needs_now',  label: t('financial_needs_now') },
-      ];
+    : isTraduce
+      ? [
+          { value: 'week_1_2',     label: t('ramp_week_1_2_traduce') },
+          { value: 'week_3_4',     label: t('ramp_week_3_4_traduce') },
+          { value: 'month_2',      label: t('ramp_month_2_traduce') },
+          { value: 'month_3_plus', label: t('ramp_month_3_plus_traduce') },
+        ]
+      : [
+          { value: 'stable',     label: t('financial_stable') },
+          { value: 'needs_now',  label: t('financial_needs_now') },
+        ];
 
-  const title       = isTrebolife ? t('ramp_title')       : t('financial_title');
-  const description = isTrebolife ? t('ramp_description') : t('financial_description');
+  const title = isTrebolife
+    ? t('ramp_title')
+    : isTraduce
+      ? t('ramp_title_traduce')
+      : t('financial_title');
+  const description = isTrebolife
+    ? t('ramp_description')
+    : isTraduce
+      ? t('ramp_description_traduce')
+      : t('financial_description');
 
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">

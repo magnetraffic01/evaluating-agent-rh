@@ -12,7 +12,12 @@ export default function ExperienceStep({ onNext, company }: Props) {
   const [experience, setExperience] = useState('');
 
   const isTrebolife = company === 'trebolife';
-  const description = isTrebolife ? t('exp_description_trebolife') : t('exp_description');
+  const isTraduce = company === 'traduce';
+  const description = isTrebolife
+    ? t('exp_description_trebolife')
+    : isTraduce
+      ? t('exp_description_traduce')
+      : t('exp_description');
 
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">

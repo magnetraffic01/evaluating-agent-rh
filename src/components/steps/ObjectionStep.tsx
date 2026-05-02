@@ -13,6 +13,7 @@ export default function ObjectionStep({ onNext, onDisqualify, company }: Props) 
   const [response, setResponse] = useState('');
 
   const isTrebolife = company === 'trebolife';
+  const isTraduce = company === 'traduce';
 
   const handleSubmit = () => {
     if (response.trim().length < 10) {
@@ -23,9 +24,21 @@ export default function ObjectionStep({ onNext, onDisqualify, company }: Props) 
   };
 
   const title       = t('objection_title');
-  const setup       = isTrebolife ? t('objection_setup_trebolife') : t('objection_setup');
-  const quote       = isTrebolife ? t('objection_quote_trebolife') : t('objection_quote');
-  const description = isTrebolife ? t('objection_description_trebolife') : t('objection_description');
+  const setup       = isTrebolife
+    ? t('objection_setup_trebolife')
+    : isTraduce
+      ? t('objection_setup_traduce')
+      : t('objection_setup');
+  const quote       = isTrebolife
+    ? t('objection_quote_trebolife')
+    : isTraduce
+      ? t('objection_quote_traduce')
+      : t('objection_quote');
+  const description = isTrebolife
+    ? t('objection_description_trebolife')
+    : isTraduce
+      ? t('objection_description_traduce')
+      : t('objection_description');
   const placeholder = t('objection_placeholder');
 
   return (

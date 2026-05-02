@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Company } from '@/types/evaluation';
 
 interface Props {
   onNext: (data: Record<string, any>) => void;
+  company: Company;
 }
 
-export default function AutonomyStep({ onNext }: Props) {
+export default function AutonomyStep({ onNext, company }: Props) {
   const { t } = useLanguage();
   const [desc, setDesc] = useState('');
+
+  const isTraduce = company === 'traduce';
+  const description = isTraduce ? t('autonomy_description_traduce') : t('autonomy_description');
 
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
       <h2 className="text-xl font-bold text-foreground mb-4">{t('autonomy_title')}</h2>
-      <p className="text-muted-foreground leading-relaxed mb-6">{t('autonomy_description')}</p>
+      <p className="text-muted-foreground leading-relaxed mb-6">{description}</p>
       <textarea
         value={desc}
         onChange={(e) => setDesc(e.target.value)}

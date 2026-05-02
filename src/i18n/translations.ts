@@ -209,6 +209,10 @@ const translations = {
     expired_desc:
       'Tu sesión de evaluación ha expirado por inactividad.\n\nPor favor, contacta a tu reclutador para recibir un nuevo enlace de evaluación.',
 
+    // Loader LLM (overlay durante scoring async ~8s)
+    llm_analyzing_title: 'Analizando tu respuesta…',
+    llm_analyzing_subtitle: 'Estamos evaluando con IA. Tarda unos segundos.',
+
     // ─── Trebolife specific ──────────────────────────────────────────────────
     basic_more40: 'Sí, tengo 40+ horas semanales disponibles ✓',
     basic_less40: 'No, tengo menos de 40 horas',
@@ -517,6 +521,44 @@ const translations = {
 
     // Company assignment section
     admin_company_assignment_title: 'Asignación por Empresa',
+
+    // ─── Traduce specific ───────────────────────────────────────────────────
+    basic_description_traduce:
+      'Hola {name}. Para closer de Traduce necesitamos confirmar 3 cosas:\n\n• Desde dónde nos escribes\n• Tu correo (para enviarte la información del proceso)\n• Que tengas 40+ horas semanales reales (los clientes migrantes requieren mucho seguimiento)',
+
+    exp_description_traduce:
+      'En Traduce vendés traducciones certificadas ($14-$120/orden) para trámites migratorios (USCIS, DMV, cortes, escuelas).\n\nCuéntame:\n• ¿Has trabajado con clientes que requieren 5-10 contactos antes de comprar (tipo trámite o migración)?\n• ¿Cuánto tiempo en promedio tardabas en cerrar ese tipo de lead?\n• ¿Has vendido a familias hispanas en EE.UU. antes?\n\nY dame un ejemplo concreto: cliente llama pidiendo 1 página por $14 — ¿cómo lo subís a un paquete de $80-120 sin presionar?',
+
+    react_description_traduce:
+      'Cliente pidió cotización hace 1 mes y no ha respondido más.\n\nEscríbeme el mensaje REAL que le mandarías el día de hoy para reactivarlo. No el concepto — el mensaje literal que le enviarías por WhatsApp o email.',
+
+    objection_setup_traduce:
+      'Estás en una llamada con un prospecto. Le presentaste el paquete de 3 documentos por $95 y te dijo que lo pensaba. Han pasado 8 días y no ha respondido. Hoy lo llamás y te dice:',
+    objection_quote_traduce:
+      '💬 "Déjame pensarlo y te aviso cuando esté listo"',
+    objection_description_traduce:
+      '¿Qué hacés exactamente ese día 8? Escribe las palabras reales que dirías — no el concepto, la frase literal.',
+
+    autonomy_description_traduce:
+      'Trabajando 100% en remoto con 80+ leads activos en distintas etapas (algunos pidieron cotización, otros dijeron "después", otros llevan semanas sin responder), ¿cómo organizás tu pipeline para no perder a ninguno?',
+
+    // Step 11 — Ramp-up (Traduce)
+    ramp_title_traduce: 'Velocidad de arranque',
+    ramp_description_traduce:
+      'En Traduce el ticket promedio es $100/orden con 5% de comisión (~$5/venta) más bonos de retención.\n\n• Mes 1 estimado = $300-500\n• Mes 3 con retorno de clientes = $800-1,200\n• Mes 6 con referidos activos = $1,500+\n\nEn tu último trabajo, ¿en qué semana llegaste a tu cuota? ¿Cuánto tardabas en cerrar el lead promedio?',
+    ramp_week_1_2_traduce: 'Semana 1-2 (cierro rápido, ya tengo el método de seguimiento)',
+    ramp_week_3_4_traduce: 'Semana 3-4 (necesito entender el producto y calibrar mi pitch)',
+    ramp_month_2_traduce: 'Mes 2 (necesito un mes completo de práctica y feedback)',
+    ramp_month_3_plus_traduce: 'Mes 3 o más (necesito tiempo para aprender desde cero)',
+
+    // Step 12 — Retention (Traduce — reutiliza churn_title, escenario nuevo)
+    churn_title_traduce: 'Retención y recurrencia de clientes',
+    churn_scenario_traduce:
+      'Carlos terminó su trámite de naturalización. Pagó $95 por 3 documentos, quedó feliz con el servicio.',
+    churn_question_traduce:
+      '¿Cómo lo convertís en cliente recurrente? Sé concreto: ¿qué le dirías en ese momento? ¿cuándo y cómo lo re-contactarías? ¿qué trámite futuro le mencionarías?',
+    churn_placeholder_traduce:
+      'Ej: al terminar le pregunto si tiene familia que también necesite documentos. Le explico que el próximo trámite de renovación lo puede agendar ya con descuento...',
   },
 
   en: {
@@ -725,6 +767,10 @@ const translations = {
     expired_title: 'Session Expired',
     expired_desc:
       'Your evaluation session has expired due to inactivity.\n\nPlease contact your recruiter to receive a new evaluation link.',
+
+    // Loader LLM (overlay during async scoring ~8s)
+    llm_analyzing_title: 'Analyzing your answer…',
+    llm_analyzing_subtitle: 'Our AI is evaluating it. Takes a few seconds.',
 
     // ─── Trebolife specific ──────────────────────────────────────────────────
     basic_more40: 'Yes, I have 40+ hours available per week ✓',
@@ -1032,6 +1078,44 @@ const translations = {
 
     // Company assignment section
     admin_company_assignment_title: 'Assignment by Company',
+
+    // ─── Traduce specific ───────────────────────────────────────────────────
+    basic_description_traduce:
+      "Hi {name}. To be a Traduce closer we need to confirm 3 things:\n\n• Where you're writing from\n• Your email (so we can send you process info)\n• That you actually have 40+ hours per week (immigrant clients require heavy follow-up)",
+
+    exp_description_traduce:
+      "At Traduce you sell certified translations ($14-$120/order) for immigration paperwork (USCIS, DMV, courts, schools).\n\nTell me:\n• Have you worked with clients who need 5-10 contacts before buying (like immigration or bureaucratic processes)?\n• On average, how long did it take you to close that type of lead?\n• Have you sold to Hispanic families in the US before?\n\nAnd give me a concrete example: client calls asking for 1 page for $14 — how do you move them up to an $80-120 package without being pushy?",
+
+    react_description_traduce:
+      "A client requested a quote 1 month ago and hasn't responded since.\n\nWrite the REAL message you would send them today to reactivate them. Not the concept — the literal message you'd send via WhatsApp or email.",
+
+    objection_setup_traduce:
+      "You're on a call with a prospect. You pitched a 3-document package for $95 and they said they'd think about it. 8 days have passed with no response. Today you call them and they say:",
+    objection_quote_traduce:
+      '💬 "Let me think about it and I\'ll let you know when I\'m ready"',
+    objection_description_traduce:
+      "What do you do exactly on day 8? Write the real words you would say — not the concept, the literal phrase.",
+
+    autonomy_description_traduce:
+      'Working 100% remotely with 80+ active leads at different stages (some requested a quote, others said "later", others haven\'t responded in weeks), how do you organize your pipeline to avoid losing any of them?',
+
+    // Step 11 — Ramp-up (Traduce)
+    ramp_title_traduce: 'Ramp-up speed',
+    ramp_description_traduce:
+      'At Traduce the average ticket is $100/order with 5% commission (~$5/sale) plus retention bonuses.\n\n• Estimated month 1 = $300-500\n• Month 3 with returning clients = $800-1,200\n• Month 6 with active referrals = $1,500+\n\nIn your last job, by which week did you reach your quota? How long did it take you to close the average lead?',
+    ramp_week_1_2_traduce: 'Week 1-2 (I close fast, I already have a follow-up system)',
+    ramp_week_3_4_traduce: 'Week 3-4 (I need to understand the product and calibrate my pitch)',
+    ramp_month_2_traduce: 'Month 2 (I need a full month of practice and feedback)',
+    ramp_month_3_plus_traduce: 'Month 3 or more (I need time to learn from scratch)',
+
+    // Step 12 — Retention (Traduce)
+    churn_title_traduce: 'Client retention and recurrence',
+    churn_scenario_traduce:
+      'Carlos finished his naturalization process. He paid $95 for 3 documents and was happy with the service.',
+    churn_question_traduce:
+      'How do you turn him into a recurring client? Be specific: what would you say to him at that moment? When and how would you follow up? What future paperwork would you mention?',
+    churn_placeholder_traduce:
+      "E.g.: when we finish I ask if he has family that also needs documents. I explain that his next renewal can be booked now with a discount...",
   },
 } as const;
 

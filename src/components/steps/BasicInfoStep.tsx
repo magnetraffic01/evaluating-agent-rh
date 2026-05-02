@@ -16,11 +16,14 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
   const [email, setEmail] = useState('');
 
   const isTrebolife = company === 'trebolife';
+  const isTraduce = company === 'traduce';
+  // Both Trebolife and Traduce require 40h+ and collect email in BasicInfo.
+  const isFullTimeCompany = isTrebolife || isTraduce;
 
   const isEmailValid = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 
-  // Trebolife: 40h+ es la cuota mínima (5 ventas/día requiere FT real).
-  const availabilityOptions = isTrebolife
+  // Trebolife/Traduce: 40h+ (heavy follow-up volume for both models).
+  const availabilityOptions = isFullTimeCompany
     ? [
         { value: 'more_40', label: t('basic_more40') },
         { value: 'less_40', label: t('basic_less40') },
@@ -30,20 +33,22 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
         { value: 'less_30', label: t('basic_less30') },
       ];
 
-  // Para Trebolife usamos un texto distinto que ya menciona 40h y email.
+  // Company-specific description with 40h + email mention.
   const description = isTrebolife
     ? t('basic_description_trebolife', { name })
-    : t('basic_description', { name });
+    : isTraduce
+      ? t('basic_description_traduce', { name })
+      : t('basic_description', { name });
 
-  const disqualifyValue = isTrebolife ? 'less_40' : 'less_30';
+  const disqualifyValue = isFullTimeCompany ? 'less_40' : 'less_30';
   const submitDisabled =
     !location.trim() ||
     !availability ||
-    (isTrebolife && !isEmailValid(email));
+    (isFullTimeCompany && !isEmailValid(email));
 
   const handleClick = () => {
     if (!location.trim() || !availability) return;
-    if (isTrebolife && !isEmailValid(email)) return;
+    if (isFullTimeCompany && !isEmailValid(email)) return;
     if (availability === disqualifyValue) {
       onDisqualify('sin_disponibilidad');
       return;
@@ -52,7 +57,7 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
       location: location.trim(),
       availability,
     };
-    if (isTrebolife) payload.email = email.trim();
+    if (isFullTimeCompany) payload.email = email.trim();
     onNext(payload);
   };
 
@@ -77,7 +82,7 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
           />
         </div>
 
-        {isTrebolife && (
+        {isFullTimeCompany && (
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               {t('basic_email_label')}
