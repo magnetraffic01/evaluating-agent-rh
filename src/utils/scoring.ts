@@ -50,6 +50,10 @@ export function scoreVolume(answer: string): { score: number; dailyCalls: number
 }
 
 export function scoreIncomePenalty(income: number, exitReason: string): number {
+  // Bug fix: guard contra valores undefined/null. Antes si exitReason era
+  // undefined (descarte previo, candidato que no llega al step 4), .trim()
+  // tiraba TypeError al evaluar calculateTotalScore.
+  if (typeof income !== 'number' || !exitReason || typeof exitReason !== 'string') return 0;
   if (income >= 800 && exitReason.trim().length < 30) return -8;
   return 0;
 }

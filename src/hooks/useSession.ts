@@ -96,6 +96,9 @@ function toUpdatePayload(state: EvaluationState): EvaluationUpdateBody {
 function buildAnswers(state: EvaluationState): Record<string, unknown> {
   return {
     company:               state.company,
+    // Bug fix: email también va en answers para que el dashboard pueda
+    // mostrarlo aunque la columna `email` top-level no se haya populado todavía.
+    email:                 state.email || null,
     availability:          state.availability,
     experience:            state.experience,
     closingRole:           state.closingRole,
@@ -117,25 +120,50 @@ function buildAnswers(state: EvaluationState): Record<string, unknown> {
 
 // ─── API pública ──────────────────────────────────────────────────────────────
 
+// Bug fix: pendingCreate evita race POST→POST. Si syncToSupabase se llama 2
+// veces antes de que el primer POST resuelva, ambas verían existingId=null y
+// emitirían 2 POSTs, generando ER_DUP_ENTRY. Encolamos el segundo hasta que
+// el primero resuelva con el id.
+const pendingCreates = new Map<string, Promise<string | null>>();
+
+async function ensureCreated(state: EvaluationState): Promise<string | null> {
+  const existingId = getEvaluationId(state.sessionId);
+  if (existingId) return existingId;
+
+  const inflight = pendingCreates.get(state.sessionId);
+  if (inflight) return inflight;
+
+  const promise = (async () => {
+    try {
+      const res = await apiEvaluations.create(toCreatePayload(state));
+      if (res?.id) {
+        rememberEvaluationId(state.sessionId, res.id);
+        return res.id;
+      }
+      return null;
+    } finally {
+      pendingCreates.delete(state.sessionId);
+    }
+  })();
+  pendingCreates.set(state.sessionId, promise);
+  return promise;
+}
+
 /**
  * Sincroniza el estado actual con el backend.
  * - Si no existe `id` aún para esta sesión → POST (crear).
  * - Si ya existe → PATCH (actualizar).
  * Fire-and-forget: no bloquea la UI.
+ *
+ * Anonymous: TRUE para PATCH del candidato — evita mandar JWT admin si
+ * está cacheado en mismo browser y disparar un redirect a /admin/login.
  */
 export async function syncToSupabase(state: EvaluationState): Promise<void> {
   try {
-    const existingId = getEvaluationId(state.sessionId);
-    if (!existingId) {
-      const res = await apiEvaluations.create(toCreatePayload(state));
-      if (res?.id) rememberEvaluationId(state.sessionId, res.id);
-      return;
-    }
-    await apiEvaluations.update(existingId, toUpdatePayload(state));
+    const id = await ensureCreated(state);
+    if (!id) return;
+    await apiEvaluations.update(id, toUpdatePayload(state), { anonymous: true });
   } catch (e) {
-    // Si el POST falló por duplicado (otra pestaña ya creó la sesión), el
-    // siguiente sync intentará un PATCH si recuperamos el id en algún punto.
-    // Por ahora solo logueamos en dev — el flujo del candidato no debe romperse.
     if (import.meta.env.DEV) {
       const msg = e instanceof ApiError ? `${e.status} ${e.message}` : String(e);
       console.error('[useSession.sync]', msg);
@@ -149,13 +177,10 @@ export async function syncToSupabase(state: EvaluationState): Promise<void> {
  */
 export async function completeInSupabase(state: EvaluationState): Promise<{ error: string | null }> {
   try {
-    const existingId = getEvaluationId(state.sessionId);
-    if (!existingId) {
-      const res = await apiEvaluations.create(toCreatePayload(state));
-      if (res?.id) rememberEvaluationId(state.sessionId, res.id);
-      return { error: null };
-    }
-    await apiEvaluations.update(existingId, toUpdatePayload(state));
+    const id = await ensureCreated(state);
+    if (!id) return { error: null };
+    // anonymous: true — flujo del candidato, no admin
+    await apiEvaluations.update(id, toUpdatePayload(state), { anonymous: true });
     return { error: null };
   } catch (e) {
     const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));

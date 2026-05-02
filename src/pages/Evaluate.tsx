@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -63,6 +63,10 @@ export default function Evaluate() {
   const [state, setState] = useState<EvaluationState | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  // Lock síncrono para evitar dobles clicks. setState es asíncrono y la UI
+  // puede disparar 2 handleNext o handleDisqualify antes de que el state se
+  // actualice. useRef.current es leído inmediatamente.
+  const handlerLockRef = useRef(false);
   const { startStep, endStepAndReport } = useStepTracking();
 
   // Anti-retroceso del navegador
@@ -148,7 +152,13 @@ export default function Evaluate() {
 
   const handleDisqualify = useCallback(async (reason: string) => {
     if (!state) return;
-    setIsSaving(true);
+    // Bug fix: guard contra doble click — si nadie tomó el lock aún, lo tomamos.
+    // Si handleNext ya lo tomó (descalificación durante el flow), seguimos
+    // adelante sin re-bloquear.
+    if (!handlerLockRef.current) {
+      handlerLockRef.current = true;
+      setIsSaving(true);
+    }
 
     const updated: EvaluationState = {
       ...state,
@@ -172,6 +182,7 @@ export default function Evaluate() {
     sendWebhook(updated);
 
     endStepAndReport(state.currentStep, state.sessionId);
+    handlerLockRef.current = false;
     setIsSaving(false);
     navigate(`/result/${updated.sessionId}`);
   }, [state, navigate, endStepAndReport]);
@@ -179,7 +190,12 @@ export default function Evaluate() {
   // ─── Avanzar paso ───────────────────────────────────────────────────────────
 
   const handleNext = useCallback(async (data: Record<string, any>) => {
-    if (!state || isSaving) return;
+    // Bug fix: lock síncrono con useRef. Sin esto el usuario podía
+    // disparar 2 handleNext concurrentes durante los await LLM (~8s),
+    // generando race condition con scores incorrectos.
+    if (!state || handlerLockRef.current) return;
+    handlerLockRef.current = true;
+    setIsSaving(true);
 
     let updated = { ...state, ...data };
     const step = state.currentStep;
@@ -311,6 +327,7 @@ export default function Evaluate() {
 
         // Navegar siempre — el resultado ya está en localStorage
         endStepAndReport(13, state.sessionId);
+        handlerLockRef.current = false;
         setIsSaving(false);
         navigate(`/result/${updated.sessionId}`);
         return;
@@ -327,7 +344,11 @@ export default function Evaluate() {
 
     // Sync con Supabase en background (no bloquea la UI)
     syncToSupabase(updated);
-  }, [state, isSaving, navigate, handleDisqualify, endStepAndReport]);
+
+    // Liberar el lock solo después de que el state quedó actualizado.
+    handlerLockRef.current = false;
+    setIsSaving(false);
+  }, [state, navigate, handleDisqualify, endStepAndReport]);
 
   // ─── Guard: parámetros inválidos ────────────────────────────────────────────
 

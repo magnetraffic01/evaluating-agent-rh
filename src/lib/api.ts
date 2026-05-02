@@ -363,8 +363,16 @@ export const evaluations = {
   get(id: string) {
     return api.get<Evaluation>(`/api/hr/evaluations/${encodeURIComponent(id)}`);
   },
-  update(id: string, patch: EvaluationUpdateBody) {
-    return api.patch<{ ok: true }>(`/api/hr/evaluations/${encodeURIComponent(id)}`, patch);
+  // Bug fix: el flujo del candidato (sin auth) debe pasar anonymous=true para
+  // NO mandar el JWT del admin si quedó cacheado en el mismo browser. Sin esto,
+  // un PATCH con token expirado dispara handleUnauthorized y redirige a /admin/login
+  // EN MEDIO de la evaluación del candidato.
+  update(id: string, patch: EvaluationUpdateBody, opts?: { anonymous?: boolean }) {
+    return api.patch<{ ok: true }>(
+      `/api/hr/evaluations/${encodeURIComponent(id)}`,
+      patch,
+      { anonymous: !!opts?.anonymous }
+    );
   },
 };
 

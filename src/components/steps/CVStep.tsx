@@ -27,7 +27,11 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
   const [uploaded, setUploaded] = useState<{ path: string; signedUrl: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [attempts, setAttempts] = useState(0);
+  // Bug fix: contadores separados por tab. Antes `attempts` era compartido,
+  // así que fallar 1 vez en URL + cambiar a File descalificaba en el primer
+  // submit aunque ahí fuera el primer intento real del candidato.
+  const [attemptsUrl, setAttemptsUrl] = useState(0);
+  const [attemptsFile, setAttemptsFile] = useState(0);
   const [formError, setFormError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
 
@@ -76,8 +80,8 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
     if (tab === 'url') {
       const trimmed = url.trim();
       if (!trimmed) {
-        if (attempts >= 1) { onDisqualify('no_envio_cv'); return; }
-        setAttempts(a => a + 1);
+        if (attemptsUrl >= 1) { onDisqualify('no_envio_cv'); return; }
+        setAttemptsUrl(a => a + 1);
         setFormError(t('cv_error_url'));
         return;
       }
@@ -87,8 +91,8 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
 
     if (!uploaded) {
       if (!file) {
-        if (attempts >= 1) { onDisqualify('no_envio_cv'); return; }
-        setAttempts(a => a + 1);
+        if (attemptsFile >= 1) { onDisqualify('no_envio_cv'); return; }
+        setAttemptsFile(a => a + 1);
         setFormError(t('cv_error_file'));
         return;
       }
