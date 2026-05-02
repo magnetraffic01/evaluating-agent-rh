@@ -31,3 +31,9 @@ dist-ssr
 *.sln
 *.sw?
 .admin-creds.txt
+
+# Playwright
+test-results/
+playwright-report/
+.last-run.json
+/blob-report/

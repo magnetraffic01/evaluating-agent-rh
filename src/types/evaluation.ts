@@ -82,9 +82,13 @@ export const DISQUALIFY_REASONS: Record<string, string> = {
 };
 
 // Pasos que se SALTAN para cada empresa (referenciados por índice en el flujo legacy).
-// Trebolife: skip Consent(0), Philosophy(8), Verification(9), PreReg(12 — reemplazado por Churn)
+// Trebolife: skip Consent(0), Philosophy(8), Verification(9).
+// El step 12 NO se skipea — StepRenderer lo reemplaza con ChurnResistance
+// para Trebolife (en lugar del PreReg legacy de edad/marital). Esto era
+// un bug pre-existente: tenía 12 en el set, así que el step se saltaba
+// sin renderear ChurnResistance, y churnPrevention quedaba vacío en DB.
 export const SKIPPED_STEPS_BY_COMPANY: Record<string, Set<number>> = {
-  trebolife: new Set([0, 8, 9, 12]),
+  trebolife: new Set([0, 8, 9]),
   traduce: new Set([]), // pendiente Fase 2.C-Traduce
 };
 
