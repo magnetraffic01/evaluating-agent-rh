@@ -63,8 +63,11 @@ export interface EvaluationListItem {
   score_total: number;
   status: EvaluationStatus;
   assigned_to: string | null;
+  company: 'trebolife' | 'traduce' | null;
   interview_status: string | null;
   interview_date: string | null;
+  hired_status: 'hired' | 'declined' | 'no_show' | null;
+  hired_at: string | null;
 }
 
 export interface EvaluationCreateBody {

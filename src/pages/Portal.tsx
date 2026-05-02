@@ -7,6 +7,7 @@ import {
 import MagnetLogo from '@/components/MagnetLogo';
 import { BriefingCard } from '@/components/admin/BriefingCard';
 import { LLMResponseCard } from '@/components/admin/LLMResponseCard';
+import RecruiterMetrics from '@/components/portal/RecruiterMetrics';
 import { useBriefing, fetchEvaluationDetail, type AdminEvaluation } from '@/hooks/useAdmin';
 import { ApiError as _ApiError } from '@/lib/api';
 import {
@@ -51,8 +52,11 @@ interface PortalEvaluation {
   score_total: number;
   status: 'en_progreso' | 'elite' | 'calificado' | 'potencial' | 'descartado';
   assigned_to: string | null;
+  company: 'trebolife' | 'traduce' | null;
   interview_status: string | null;
   interview_date: string | null;
+  hired_status: 'hired' | 'declined' | 'no_show' | null;
+  hired_at: string | null;
   created_at: string;
   completed_at: string | null;
   email: string | null;
@@ -435,8 +439,11 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
         score_total:      r.score_total,
         status:           r.status,
         assigned_to:      r.assigned_to,
+        company:          r.company,
         interview_status: r.interview_status,
         interview_date:   r.interview_date,
+        hired_status:     r.hired_status,
+        hired_at:         r.hired_at,
         created_at:       r.created_at,
         completed_at:     r.completed_at,
         email:            r.email,
@@ -521,28 +528,8 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
           </motion.div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
-            { labelKey: 'portal_stat_my_candidates', value: stats.total,        colorClass: 'text-foreground'       },
-            { labelKey: 'portal_stat_scheduled',     value: stats.agendadas,    colorClass: 'text-primary'          },
-            { labelKey: 'portal_stat_elite',         value: stats.elite,        colorClass: 'text-success'          },
-            { labelKey: 'portal_stat_qualified',     value: stats.calificados,  colorClass: 'text-warning'          },
-            { labelKey: 'portal_stat_potential',     value: stats.potenciales,  colorClass: 'text-muted-foreground' },
-          ].map((stat, i) => (
-            <motion.div key={stat.labelKey}
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07 }}
-              className="glass-card rounded-xl p-4">
-              <p className="text-muted-foreground text-xs mb-1.5">{t(stat.labelKey as Parameters<typeof t>[0])}</p>
-              <p className={`text-2xl font-bold ${stat.colorClass}`}>
-                {loading
-                  ? <span className="inline-block w-8 h-6 bg-muted/50 rounded animate-pulse" />
-                  : stat.value}
-              </p>
-            </motion.div>
-          ))}
-        </div>
+        {/* Stats / Metrics dashboard */}
+        <RecruiterMetrics evaluations={evaluations} />
 
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
