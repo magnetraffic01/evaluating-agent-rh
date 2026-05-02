@@ -245,6 +245,278 @@ const translations = {
     churn_placeholder:
       'Ej: en la llamada no le pregunté si ya tiene dentista de cabecera. Si no usa el seguro porque no tiene a quién acudir...',
     churn_hint: 'Esta respuesta la lee la reclutadora — sé honesto, no genérico.',
+
+    // ─── Portal (FASE 6 i18n) ──────────────────────
+    // Login
+    portal_title: 'Portal de Reclutadora',
+    portal_login_subtitle: 'Acceso restringido · Magnetraffic',
+    portal_login_email_placeholder: 'tu@email.com',
+    portal_login_password_placeholder: 'Contraseña',
+    portal_login_btn_loading: 'Accediendo...',
+    portal_login_btn: 'Acceder',
+    portal_login_error_empty: 'Por favor ingresa tu email y contraseña.',
+    portal_login_error_credentials: 'Credenciales incorrectas. Verifica tu email y contraseña.',
+    portal_login_error_generic: 'Error al iniciar sesión.',
+
+    // Header / nav
+    portal_header_title: 'Portal Reclutador',
+    portal_btn_refresh: 'Actualizar',
+    portal_btn_logout: 'Salir',
+    portal_recruiter_fallback: 'Reclutador',
+
+    // Stats cards
+    portal_stat_my_candidates: 'Mis Candidatos',
+    portal_stat_scheduled: 'Agendados',
+    portal_stat_elite: 'Elite',
+    portal_stat_qualified: 'Calificados',
+    portal_stat_potential: 'Potenciales',
+
+    // Status labels (badge)
+    portal_status_elite: 'ELITE',
+    portal_status_calificado: 'CALIFICADO',
+    portal_status_potencial: 'POTENCIAL',
+    portal_status_descartado: 'DESCARTADO',
+    portal_status_en_progreso: 'EN PROGRESO',
+
+    // Interview status labels
+    portal_interview_agendada: 'Agendada',
+    portal_interview_entrevistado: 'Entrevistado',
+    portal_interview_no_asistio: 'No asistió',
+    portal_interview_reprogramado: 'Reprogramado',
+    portal_interview_rechazado_post: 'Rechazado post-entrevista',
+
+    // Filters
+    portal_search_placeholder: 'Buscar por nombre o teléfono...',
+    portal_filter_all: 'Todos los estados',
+    portal_filter_elite: 'Elite',
+    portal_filter_calificado: 'Calificado',
+    portal_filter_potencial: 'Potencial',
+    portal_filter_descartado: 'Descartado',
+    portal_filter_en_progreso: 'En progreso',
+    portal_btn_clear: 'Limpiar',
+
+    // Totalizador
+    portal_candidate_singular: 'candidato',
+    portal_candidate_plural: 'candidatos',
+    portal_of_total: 'de {total}',
+    portal_filter_active: 'filtro activo',
+
+    // Table headers
+    portal_col_name: 'Nombre',
+    portal_col_phone: 'Teléfono',
+    portal_col_location: 'Ubicación',
+    portal_col_score: 'Score',
+    portal_col_result: 'Resultado',
+    portal_col_interview: 'Entrevista',
+    portal_col_date: 'Fecha',
+
+    // Table states
+    portal_loading_candidates: 'Cargando candidatos...',
+    portal_empty_candidates: 'No hay candidatos que coincidan',
+
+    // Footer
+    portal_footer: '{filtered} de {total} candidatos · Magnetraffic HR',
+
+    // Config panel
+    portal_config_title: 'Mi Configuración',
+    portal_config_name: 'Nombre',
+    portal_config_label: 'Label',
+    portal_config_total_assigned: 'Asignados totales',
+    portal_config_calendar_url: 'URL del calendario',
+    portal_btn_copied: 'Copiado',
+    portal_btn_copy_link: 'Copiar enlace',
+
+    // Modal — candidate detail
+    portal_modal_loading: 'Cargando datos completos...',
+    portal_modal_phone: 'Teléfono',
+    portal_modal_email: 'Email',
+    portal_modal_location: 'Ubicación',
+    portal_modal_interview_status: 'Estado entrevista',
+    portal_modal_interview_date: 'Fecha entrevista',
+    portal_modal_eval_date: 'Fecha evaluación',
+    portal_modal_llm_title: 'Respuestas LLM-evaluadas',
+    portal_modal_notes_title: 'Notas',
+
+    // ─── Admin (FASE 6 i18n) ──────────────────────
+    // Login
+    admin_login_title: 'Panel de Administración',
+    admin_login_subtitle: 'Acceso restringido · Magnetraffic',
+    admin_login_email_placeholder: 'tu@email.com',
+    admin_login_password_placeholder: 'Contraseña',
+    admin_login_btn: 'Acceder al Panel',
+    admin_login_btn_loading: 'Validando...',
+    admin_login_error_empty: 'Ingresa tu email y contraseña.',
+    admin_login_error_credentials: 'Credenciales incorrectas.',
+    admin_login_error_generic: 'Error al iniciar sesión.',
+
+    // Header
+    admin_btn_refresh: 'Actualizar',
+    admin_btn_logout: 'Salir',
+
+    // Tabs
+    admin_tab_candidates: 'Candidatos',
+    admin_tab_recruiters: 'Reclutadores',
+    admin_tab_companies: 'Empresas',
+    admin_tab_analytics: 'Analytics',
+
+    // Status labels (STATUS_CONFIG)
+    admin_status_elite: 'ELITE',
+    admin_status_calificado: 'CALIFICADO',
+    admin_status_potencial: 'POTENCIAL',
+    admin_status_descartado: 'DESCARTADO',
+    admin_status_en_progreso: 'EN PROGRESO',
+
+    // Interview status labels (INTERVIEW_STATUS_CONFIG)
+    admin_interview_agendada: 'Agendada',
+    admin_interview_entrevistado: 'Entrevistado',
+    admin_interview_no_asistio: 'No asistió',
+    admin_interview_reprogramado: 'Reprogramado',
+    admin_interview_rechazado_post: 'Rechazado post-entrevista',
+
+    // Score labels (SCORE_LABELS)
+    admin_score_label_E1_cierre: 'Cierre directo',
+    admin_score_label_E1_volumen: 'Volumen llamadas',
+    admin_score_label_E3_copywriting: 'Copywriting',
+    admin_score_label_E4_objeciones: 'Objeciones',
+    admin_score_label_E5_autonomia: 'Autonomía',
+    admin_score_label_E6_filosofia: 'Filosofía de ventas',
+    admin_score_label_C1_estabilidad: 'Estabilidad laboral',
+    admin_score_label_V1_penalty: 'Penalización consistencia',
+    admin_score_label_E2_penalty: 'Penalización narrativa',
+
+    // Filters
+    admin_search_placeholder: 'Buscar por nombre, teléfono o email...',
+    admin_filter_all_statuses: 'Todos los estados',
+    admin_filter_elite: 'Elite',
+    admin_filter_calificado: 'Calificado',
+    admin_filter_potencial: 'Potencial',
+    admin_filter_descartado: 'Descartado',
+    admin_filter_en_progreso: 'En progreso',
+    admin_filter_all_recruiters: 'Todos los reclutadores',
+    admin_filter_today: 'Hoy',
+    admin_filter_yesterday: 'Ayer',
+    admin_filter_this_week: 'Esta semana',
+    admin_filter_this_month: 'Este mes',
+    admin_btn_clear_dates: 'Limpiar',
+
+    // Stats cards
+    admin_stat_total: 'Total',
+    admin_stat_today: 'Hoy',
+    admin_stat_qualified: 'Calificados',
+    admin_stat_discarded: 'Descartados',
+    admin_stat_avg_duration: 'Duración prom.',
+
+    // Totalizador
+    admin_count_evaluation_singular: 'evaluación',
+    admin_count_evaluation_plural: 'evaluaciones',
+    admin_count_of: 'de {total}',
+    admin_filter_active: 'filtro activo',
+
+    // Table headers
+    admin_col_name: 'Nombre',
+    admin_col_phone: 'Teléfono',
+    admin_col_location: 'Ubicación',
+    admin_col_score: 'Score',
+    admin_col_result: 'Resultado',
+    admin_col_recruiter: 'Reclutador',
+    admin_col_interview: 'Entrevista',
+    admin_col_date: 'Fecha',
+
+    // Table states
+    admin_loading_evaluations: 'Cargando evaluaciones...',
+    admin_empty_evaluations: 'No hay evaluaciones que coincidan',
+    admin_error_loading: 'Error al cargar datos: {error}',
+    admin_btn_retry: 'Reintentar',
+
+    // Table action
+    admin_btn_view: 'Ver →',
+
+    // Footer
+    admin_footer: '{filtered} de {total} evaluaciones · Magnetraffic HR',
+
+    // Modal tabs
+    admin_modal_tab_candidate: 'Candidato',
+    admin_modal_tab_summary: 'Resumen',
+    admin_modal_tab_answers: 'Respuestas',
+    admin_modal_tab_score: 'Evaluación',
+    admin_modal_tab_interview: 'Entrevista',
+
+    // Modal — candidate tab
+    admin_modal_loading_detail: 'Cargando detalle completo...',
+    admin_modal_llm_responses_title: 'Respuestas LLM-evaluadas',
+    admin_modal_print_btn: 'Imprimir / PDF',
+
+    // Modal — resume tab
+    admin_modal_candidate_data_title: 'Datos del Candidato',
+    admin_modal_profile_summary_title: 'Resumen del Perfil',
+    admin_modal_exit_reason_title: 'Razón de salida del último trabajo',
+    admin_modal_best_reactivation_title: 'Mejor Mensaje de Reactivación',
+
+    // Modal — resume tab candidate fields
+    admin_modal_field_phone: 'Teléfono',
+    admin_modal_field_email: 'Email',
+    admin_modal_field_location: 'Ubicación',
+    admin_modal_field_age: 'Edad',
+    admin_modal_field_marital: 'Estado civil',
+    admin_modal_field_calls_day: 'Llamadas/día',
+    admin_modal_field_last_income: 'Último ingreso',
+    admin_modal_field_eval_date: 'Evaluación',
+
+    // Modal — QA tab
+    admin_modal_qa_title: 'Preguntas y Respuestas',
+    admin_modal_qa_empty: 'Esta evaluación no tiene respuestas detalladas guardadas.\nLas respuestas completas se guardan a partir de hoy en evaluaciones nuevas.',
+
+    // Modal — score tab
+    admin_modal_score_breakdown_title: 'Desglose de Score',
+    admin_modal_score_criteria_title: 'Criterios Aplicados',
+    admin_modal_score_flags_title: 'Flags Detectados',
+    admin_modal_score_discard_title: 'Razón de Descarte',
+
+    // Modal — interview tab
+    admin_modal_interview_title: 'Gestión de Entrevista',
+    admin_modal_interview_recruiter_label: 'Reclutador asignado',
+    admin_modal_interview_recruiter_placeholder: 'Nombre del reclutador...',
+    admin_modal_interview_unassigned: 'Sin asignar',
+    admin_modal_interview_status_label: 'Estado de la entrevista',
+    admin_modal_interview_no_status: '— Sin estado —',
+    admin_modal_interview_print_no_status: 'Sin estado',
+    admin_modal_interview_date_label: 'Fecha de entrevista',
+    admin_modal_interview_no_date: 'Sin fecha asignada',
+    admin_modal_interview_notes_label: 'Notas del reclutador',
+    admin_modal_interview_notes_placeholder: 'Observaciones post-entrevista, impresiones, próximos pasos...',
+    admin_modal_saving: 'Guardando...',
+    admin_modal_save_error: 'Error al guardar: {error}',
+
+    // Recruiter panel
+    admin_recruiter_weights_label: 'Suma de pesos activos:',
+    admin_recruiter_weights_over: '(¡supera 100%!)',
+    admin_recruiter_col_name: 'Nombre',
+    admin_recruiter_col_label: 'Label',
+    admin_recruiter_col_calendar: 'Calendario',
+    admin_recruiter_col_weight: 'Peso %',
+    admin_recruiter_col_total: 'Total Asig.',
+    admin_recruiter_col_real_pct: '% Real',
+    admin_recruiter_col_status: 'Estado',
+    admin_recruiter_col_distribution: 'Distribución',
+    admin_recruiter_col_actions: 'Acciones',
+    admin_recruiter_active: 'Activo',
+    admin_recruiter_inactive: 'Inactivo',
+    admin_recruiter_btn_save: 'Guardar',
+    admin_recruiter_btn_cancel: 'Cancelar',
+    admin_recruiter_btn_edit: 'Editar',
+    admin_recruiter_empty: 'No hay reclutadores configurados aún.',
+    admin_recruiter_btn_add: '+ Agregar reclutador',
+    admin_recruiter_add_title: 'Nuevo reclutador',
+    admin_recruiter_add_error_required: 'Nombre, label y URL del calendario son requeridos.',
+    admin_recruiter_field_name_label: 'Nombre',
+    admin_recruiter_field_name_placeholder: 'Ej: María González',
+    admin_recruiter_field_label_label: 'Label',
+    admin_recruiter_field_label_placeholder: 'Ej: Reclutador 3',
+    admin_recruiter_field_calendar_label: 'URL del calendario',
+    admin_recruiter_field_weight_label: 'Peso %',
+
+    // Company assignment section
+    admin_company_assignment_title: 'Asignación por Empresa',
   },
 
   en: {
@@ -488,6 +760,278 @@ const translations = {
     churn_placeholder:
       "E.g.: on the call I didn't ask if she has a regular dentist. If she's not using it because she has no one to go to...",
     churn_hint: "The recruiter reads this — be honest, don't go generic.",
+
+    // ─── Portal (FASE 6 i18n) ──────────────────────
+    // Login
+    portal_title: 'Recruiter Portal',
+    portal_login_subtitle: 'Restricted access · Magnetraffic',
+    portal_login_email_placeholder: 'you@email.com',
+    portal_login_password_placeholder: 'Password',
+    portal_login_btn_loading: 'Signing in...',
+    portal_login_btn: 'Sign in',
+    portal_login_error_empty: 'Please enter your email and password.',
+    portal_login_error_credentials: 'Incorrect credentials. Please verify your email and password.',
+    portal_login_error_generic: 'Error signing in.',
+
+    // Header / nav
+    portal_header_title: 'Recruiter Portal',
+    portal_btn_refresh: 'Refresh',
+    portal_btn_logout: 'Sign out',
+    portal_recruiter_fallback: 'Recruiter',
+
+    // Stats cards
+    portal_stat_my_candidates: 'My Candidates',
+    portal_stat_scheduled: 'Scheduled',
+    portal_stat_elite: 'Elite',
+    portal_stat_qualified: 'Qualified',
+    portal_stat_potential: 'Potential',
+
+    // Status labels (badge)
+    portal_status_elite: 'ELITE',
+    portal_status_calificado: 'QUALIFIED',
+    portal_status_potencial: 'POTENTIAL',
+    portal_status_descartado: 'DISCARDED',
+    portal_status_en_progreso: 'IN PROGRESS',
+
+    // Interview status labels
+    portal_interview_agendada: 'Scheduled',
+    portal_interview_entrevistado: 'Interviewed',
+    portal_interview_no_asistio: 'No show',
+    portal_interview_reprogramado: 'Rescheduled',
+    portal_interview_rechazado_post: 'Rejected post-interview',
+
+    // Filters
+    portal_search_placeholder: 'Search by name or phone...',
+    portal_filter_all: 'All statuses',
+    portal_filter_elite: 'Elite',
+    portal_filter_calificado: 'Qualified',
+    portal_filter_potencial: 'Potential',
+    portal_filter_descartado: 'Discarded',
+    portal_filter_en_progreso: 'In progress',
+    portal_btn_clear: 'Clear',
+
+    // Totalizador
+    portal_candidate_singular: 'candidate',
+    portal_candidate_plural: 'candidates',
+    portal_of_total: 'of {total}',
+    portal_filter_active: 'filter active',
+
+    // Table headers
+    portal_col_name: 'Name',
+    portal_col_phone: 'Phone',
+    portal_col_location: 'Location',
+    portal_col_score: 'Score',
+    portal_col_result: 'Result',
+    portal_col_interview: 'Interview',
+    portal_col_date: 'Date',
+
+    // Table states
+    portal_loading_candidates: 'Loading candidates...',
+    portal_empty_candidates: 'No candidates match your search',
+
+    // Footer
+    portal_footer: '{filtered} of {total} candidates · Magnetraffic HR',
+
+    // Config panel
+    portal_config_title: 'My Settings',
+    portal_config_name: 'Name',
+    portal_config_label: 'Label',
+    portal_config_total_assigned: 'Total assigned',
+    portal_config_calendar_url: 'Calendar URL',
+    portal_btn_copied: 'Copied',
+    portal_btn_copy_link: 'Copy link',
+
+    // Modal — candidate detail
+    portal_modal_loading: 'Loading full data...',
+    portal_modal_phone: 'Phone',
+    portal_modal_email: 'Email',
+    portal_modal_location: 'Location',
+    portal_modal_interview_status: 'Interview status',
+    portal_modal_interview_date: 'Interview date',
+    portal_modal_eval_date: 'Evaluation date',
+    portal_modal_llm_title: 'LLM-evaluated responses',
+    portal_modal_notes_title: 'Notes',
+
+    // ─── Admin (FASE 6 i18n) ──────────────────────
+    // Login
+    admin_login_title: 'Admin Panel',
+    admin_login_subtitle: 'Restricted access · Magnetraffic',
+    admin_login_email_placeholder: 'you@email.com',
+    admin_login_password_placeholder: 'Password',
+    admin_login_btn: 'Access Panel',
+    admin_login_btn_loading: 'Validating...',
+    admin_login_error_empty: 'Please enter your email and password.',
+    admin_login_error_credentials: 'Incorrect credentials.',
+    admin_login_error_generic: 'Error signing in.',
+
+    // Header
+    admin_btn_refresh: 'Refresh',
+    admin_btn_logout: 'Sign out',
+
+    // Tabs
+    admin_tab_candidates: 'Candidates',
+    admin_tab_recruiters: 'Recruiters',
+    admin_tab_companies: 'Companies',
+    admin_tab_analytics: 'Analytics',
+
+    // Status labels (STATUS_CONFIG)
+    admin_status_elite: 'ELITE',
+    admin_status_calificado: 'QUALIFIED',
+    admin_status_potencial: 'POTENTIAL',
+    admin_status_descartado: 'DISCARDED',
+    admin_status_en_progreso: 'IN PROGRESS',
+
+    // Interview status labels (INTERVIEW_STATUS_CONFIG)
+    admin_interview_agendada: 'Scheduled',
+    admin_interview_entrevistado: 'Interviewed',
+    admin_interview_no_asistio: 'No show',
+    admin_interview_reprogramado: 'Rescheduled',
+    admin_interview_rechazado_post: 'Rejected post-interview',
+
+    // Score labels (SCORE_LABELS)
+    admin_score_label_E1_cierre: 'Direct closing',
+    admin_score_label_E1_volumen: 'Call volume',
+    admin_score_label_E3_copywriting: 'Copywriting',
+    admin_score_label_E4_objeciones: 'Objections',
+    admin_score_label_E5_autonomia: 'Autonomy',
+    admin_score_label_E6_filosofia: 'Sales philosophy',
+    admin_score_label_C1_estabilidad: 'Job stability',
+    admin_score_label_V1_penalty: 'Consistency penalty',
+    admin_score_label_E2_penalty: 'Narrative penalty',
+
+    // Filters
+    admin_search_placeholder: 'Search by name, phone or email...',
+    admin_filter_all_statuses: 'All statuses',
+    admin_filter_elite: 'Elite',
+    admin_filter_calificado: 'Qualified',
+    admin_filter_potencial: 'Potential',
+    admin_filter_descartado: 'Discarded',
+    admin_filter_en_progreso: 'In progress',
+    admin_filter_all_recruiters: 'All recruiters',
+    admin_filter_today: 'Today',
+    admin_filter_yesterday: 'Yesterday',
+    admin_filter_this_week: 'This week',
+    admin_filter_this_month: 'This month',
+    admin_btn_clear_dates: 'Clear',
+
+    // Stats cards
+    admin_stat_total: 'Total',
+    admin_stat_today: 'Today',
+    admin_stat_qualified: 'Qualified',
+    admin_stat_discarded: 'Discarded',
+    admin_stat_avg_duration: 'Avg. duration',
+
+    // Totalizador
+    admin_count_evaluation_singular: 'evaluation',
+    admin_count_evaluation_plural: 'evaluations',
+    admin_count_of: 'of {total}',
+    admin_filter_active: 'filter active',
+
+    // Table headers
+    admin_col_name: 'Name',
+    admin_col_phone: 'Phone',
+    admin_col_location: 'Location',
+    admin_col_score: 'Score',
+    admin_col_result: 'Result',
+    admin_col_recruiter: 'Recruiter',
+    admin_col_interview: 'Interview',
+    admin_col_date: 'Date',
+
+    // Table states
+    admin_loading_evaluations: 'Loading evaluations...',
+    admin_empty_evaluations: 'No evaluations match your search',
+    admin_error_loading: 'Error loading data: {error}',
+    admin_btn_retry: 'Retry',
+
+    // Table action
+    admin_btn_view: 'View →',
+
+    // Footer
+    admin_footer: '{filtered} of {total} evaluations · Magnetraffic HR',
+
+    // Modal tabs
+    admin_modal_tab_candidate: 'Candidate',
+    admin_modal_tab_summary: 'Summary',
+    admin_modal_tab_answers: 'Answers',
+    admin_modal_tab_score: 'Evaluation',
+    admin_modal_tab_interview: 'Interview',
+
+    // Modal — candidate tab
+    admin_modal_loading_detail: 'Loading full detail...',
+    admin_modal_llm_responses_title: 'LLM-evaluated responses',
+    admin_modal_print_btn: 'Print / PDF',
+
+    // Modal — resume tab
+    admin_modal_candidate_data_title: 'Candidate Data',
+    admin_modal_profile_summary_title: 'Profile Summary',
+    admin_modal_exit_reason_title: 'Reason for leaving last job',
+    admin_modal_best_reactivation_title: 'Best Reactivation Message',
+
+    // Modal — resume tab candidate fields
+    admin_modal_field_phone: 'Phone',
+    admin_modal_field_email: 'Email',
+    admin_modal_field_location: 'Location',
+    admin_modal_field_age: 'Age',
+    admin_modal_field_marital: 'Marital status',
+    admin_modal_field_calls_day: 'Calls/day',
+    admin_modal_field_last_income: 'Last income',
+    admin_modal_field_eval_date: 'Evaluation',
+
+    // Modal — QA tab
+    admin_modal_qa_title: 'Questions & Answers',
+    admin_modal_qa_empty: 'This evaluation has no detailed answers saved.\nFull answers are saved from today on new evaluations.',
+
+    // Modal — score tab
+    admin_modal_score_breakdown_title: 'Score Breakdown',
+    admin_modal_score_criteria_title: 'Applied Criteria',
+    admin_modal_score_flags_title: 'Detected Flags',
+    admin_modal_score_discard_title: 'Discard Reason',
+
+    // Modal — interview tab
+    admin_modal_interview_title: 'Interview Management',
+    admin_modal_interview_recruiter_label: 'Assigned recruiter',
+    admin_modal_interview_recruiter_placeholder: 'Recruiter name...',
+    admin_modal_interview_unassigned: 'Unassigned',
+    admin_modal_interview_status_label: 'Interview status',
+    admin_modal_interview_no_status: '— No status —',
+    admin_modal_interview_print_no_status: 'No status',
+    admin_modal_interview_date_label: 'Interview date',
+    admin_modal_interview_no_date: 'No date assigned',
+    admin_modal_interview_notes_label: 'Recruiter notes',
+    admin_modal_interview_notes_placeholder: 'Post-interview observations, impressions, next steps...',
+    admin_modal_saving: 'Saving...',
+    admin_modal_save_error: 'Error saving: {error}',
+
+    // Recruiter panel
+    admin_recruiter_weights_label: 'Active weight sum:',
+    admin_recruiter_weights_over: '(exceeds 100%!)',
+    admin_recruiter_col_name: 'Name',
+    admin_recruiter_col_label: 'Label',
+    admin_recruiter_col_calendar: 'Calendar',
+    admin_recruiter_col_weight: 'Weight %',
+    admin_recruiter_col_total: 'Total Assigned',
+    admin_recruiter_col_real_pct: '% Real',
+    admin_recruiter_col_status: 'Status',
+    admin_recruiter_col_distribution: 'Distribution',
+    admin_recruiter_col_actions: 'Actions',
+    admin_recruiter_active: 'Active',
+    admin_recruiter_inactive: 'Inactive',
+    admin_recruiter_btn_save: 'Save',
+    admin_recruiter_btn_cancel: 'Cancel',
+    admin_recruiter_btn_edit: 'Edit',
+    admin_recruiter_empty: 'No recruiters configured yet.',
+    admin_recruiter_btn_add: '+ Add recruiter',
+    admin_recruiter_add_title: 'New recruiter',
+    admin_recruiter_add_error_required: 'Name, label and calendar URL are required.',
+    admin_recruiter_field_name_label: 'Name',
+    admin_recruiter_field_name_placeholder: 'E.g.: María González',
+    admin_recruiter_field_label_label: 'Label',
+    admin_recruiter_field_label_placeholder: 'E.g.: Recruiter 3',
+    admin_recruiter_field_calendar_label: 'Calendar URL',
+    admin_recruiter_field_weight_label: 'Weight %',
+
+    // Company assignment section
+    admin_company_assignment_title: 'Assignment by Company',
   },
 } as const;
 

@@ -16,6 +16,7 @@ import {
   type AdminUser,
   type EvaluationListItem,
 } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -60,20 +61,21 @@ interface PortalEvaluation {
 
 // ─── Constantes (mismas que Admin) ────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
-  elite:       { label: 'ELITE',       className: 'bg-primary/15 text-primary border-primary/40',             dot: 'bg-primary'          },
-  calificado:  { label: 'CALIFICADO',  className: 'bg-success/15 text-success border-success/40',             dot: 'bg-success'          },
-  potencial:   { label: 'POTENCIAL',   className: 'bg-warning/15 text-warning border-warning/40',             dot: 'bg-warning'          },
-  descartado:  { label: 'DESCARTADO',  className: 'bg-destructive/15 text-destructive border-destructive/40', dot: 'bg-destructive'      },
-  en_progreso: { label: 'EN PROGRESO', className: 'bg-muted text-muted-foreground border-border',             dot: 'bg-muted-foreground' },
+// STATUS_CONFIG labels are now driven by t() inside components — kept here only for className/dot
+const STATUS_CONFIG_STYLE: Record<string, { className: string; dot: string; tKey: string }> = {
+  elite:       { className: 'bg-primary/15 text-primary border-primary/40',             dot: 'bg-primary',          tKey: 'portal_status_elite'       },
+  calificado:  { className: 'bg-success/15 text-success border-success/40',             dot: 'bg-success',          tKey: 'portal_status_calificado'  },
+  potencial:   { className: 'bg-warning/15 text-warning border-warning/40',             dot: 'bg-warning',          tKey: 'portal_status_potencial'   },
+  descartado:  { className: 'bg-destructive/15 text-destructive border-destructive/40', dot: 'bg-destructive',      tKey: 'portal_status_descartado'  },
+  en_progreso: { className: 'bg-muted text-muted-foreground border-border',             dot: 'bg-muted-foreground', tKey: 'portal_status_en_progreso' },
 };
 
-const INTERVIEW_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  agendada:                  { label: 'Agendada',                  color: 'text-primary'     },
-  entrevistado:              { label: 'Entrevistado',              color: 'text-success'     },
-  no_asistio:                { label: 'No asistió',                color: 'text-destructive' },
-  reprogramado:              { label: 'Reprogramado',              color: 'text-warning'     },
-  rechazado_post_entrevista: { label: 'Rechazado post-entrevista', color: 'text-destructive' },
+const INTERVIEW_STATUS_CONFIG_STYLE: Record<string, { color: string; tKey: string }> = {
+  agendada:                  { color: 'text-primary',     tKey: 'portal_interview_agendada'      },
+  entrevistado:              { color: 'text-success',     tKey: 'portal_interview_entrevistado'  },
+  no_asistio:                { color: 'text-destructive', tKey: 'portal_interview_no_asistio'    },
+  reprogramado:              { color: 'text-warning',     tKey: 'portal_interview_reprogramado'  },
+  rechazado_post_entrevista: { color: 'text-destructive', tKey: 'portal_interview_rechazado_post'},
 };
 
 // ─── Modal de detalle ─────────────────────────────────────────────────────────
@@ -89,8 +91,9 @@ interface PortalEvaluationExt extends PortalEvaluation {
 }
 
 function CandidateModal({ ev: evProp, onClose }: { ev: PortalEvaluation; onClose: () => void }) {
-  const cfg = STATUS_CONFIG[evProp.status] || STATUS_CONFIG.descartado;
-  const intCfg = evProp.interview_status ? INTERVIEW_STATUS_CONFIG[evProp.interview_status] : null;
+  const { t } = useLanguage();
+  const cfg = STATUS_CONFIG_STYLE[evProp.status] || STATUS_CONFIG_STYLE.descartado;
+  const intCfg = evProp.interview_status ? INTERVIEW_STATUS_CONFIG_STYLE[evProp.interview_status] : null;
 
   // Load full detail (Phase 3 fields)
   const [ev, setEv] = useState<PortalEvaluationExt>(evProp);
@@ -196,13 +199,13 @@ function CandidateModal({ ev: evProp, onClose }: { ev: PortalEvaluation; onClose
             <div className="flex items-center flex-wrap gap-2 mt-1">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.className}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                {cfg.label}
+                {t(cfg.tKey as Parameters<typeof t>[0])}
               </span>
               <span className="text-muted-foreground text-xs">
                 Score: <strong className="text-foreground">{ev.score_total} pts</strong>
               </span>
               {intCfg && (
-                <span className={`text-xs font-medium ${intCfg.color}`}>· {intCfg.label}</span>
+                <span className={`text-xs font-medium ${intCfg.color}`}>· {t(intCfg.tKey as Parameters<typeof t>[0])}</span>
               )}
             </div>
           </div>
@@ -216,19 +219,19 @@ function CandidateModal({ ev: evProp, onClose }: { ev: PortalEvaluation; onClose
           {detailLoading && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
-              Cargando datos completos...
+              {t('portal_modal_loading')}
             </div>
           )}
 
           {/* Basic data grid */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-muted/20 rounded-xl p-4 text-sm">
             {([
-              ['Teléfono',        ev.phone],
-              ['Email',           ev.email],
-              ['Ubicación',       ev.location],
-              ['Estado entrevista', intCfg?.label],
-              ['Fecha entrevista',  ev.interview_date ? new Date(ev.interview_date).toLocaleString('es-MX') : null],
-              ['Fecha evaluación',  new Date(ev.created_at).toLocaleString('es-MX')],
+              [t('portal_modal_phone'),            ev.phone],
+              [t('portal_modal_email'),             ev.email],
+              [t('portal_modal_location'),          ev.location],
+              [t('portal_modal_interview_status'),  intCfg ? t(intCfg.tKey as Parameters<typeof t>[0]) : null],
+              [t('portal_modal_interview_date'),    ev.interview_date ? new Date(ev.interview_date).toLocaleString('es-MX') : null],
+              [t('portal_modal_eval_date'),         new Date(ev.created_at).toLocaleString('es-MX')],
             ] as [string, string | null | undefined][]).map(([label, value]) => (
               <div key={label}>
                 <span className="text-muted-foreground text-xs">{label}</span>
@@ -254,7 +257,7 @@ function CandidateModal({ ev: evProp, onClose }: { ev: PortalEvaluation; onClose
           {(reactivationMsg || objectionResponse || autonomyDesc) && (
             <div className="space-y-3">
               <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider">
-                Respuestas LLM-evaluadas
+                {t('portal_modal_llm_title')}
               </h4>
               <LLMResponseCard
                 icon="📨"
@@ -286,7 +289,7 @@ function CandidateModal({ ev: evProp, onClose }: { ev: PortalEvaluation; onClose
 
           {ev.recruiter_notes && (
             <div>
-              <h4 className="text-foreground font-semibold mb-2 text-sm">Notas</h4>
+              <h4 className="text-foreground font-semibold mb-2 text-sm">{t('portal_modal_notes_title')}</h4>
               <p className="text-muted-foreground text-sm bg-muted/10 rounded-xl p-4 leading-relaxed whitespace-pre-wrap">
                 {ev.recruiter_notes}
               </p>
@@ -301,6 +304,7 @@ function CandidateModal({ ev: evProp, onClose }: { ev: PortalEvaluation; onClose
 // ─── Login screen ─────────────────────────────────────────────────────────────
 
 function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void }) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -308,7 +312,7 @@ function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void })
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      setError('Por favor ingresa tu email y contraseña.');
+      setError(t('portal_login_error_empty'));
       return;
     }
     setLoading(true);
@@ -320,8 +324,8 @@ function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void })
     } catch (e) {
       setLoading(false);
       const msg = e instanceof ApiError
-        ? (e.status === 401 ? 'Credenciales incorrectas. Verifica tu email y contraseña.' : (e.message || 'Error al iniciar sesión.'))
-        : 'Error al iniciar sesión.';
+        ? (e.status === 401 ? t('portal_login_error_credentials') : (e.message || t('portal_login_error_generic')))
+        : t('portal_login_error_generic');
       setError(msg);
     }
   };
@@ -338,15 +342,15 @@ function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void })
         className="glass-card rounded-2xl p-8 max-w-sm w-full relative"
       >
         <div className="flex justify-center mb-8"><MagnetLogo size="lg" /></div>
-        <h2 className="text-foreground font-bold text-xl text-center mb-1">Portal de Reclutador</h2>
-        <p className="text-muted-foreground text-sm text-center mb-8">Acceso restringido · Magnetraffic</p>
+        <h2 className="text-foreground font-bold text-xl text-center mb-1">{t('portal_title')}</h2>
+        <p className="text-muted-foreground text-sm text-center mb-8">{t('portal_login_subtitle')}</p>
         <div className="space-y-3">
           <input
             type="email"
             value={email}
             onChange={e => { setEmail(e.target.value); setError(null); }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            placeholder="tu@email.com"
+            placeholder={t('portal_login_email_placeholder')}
             autoFocus
             className="w-full bg-input border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
@@ -355,7 +359,7 @@ function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void })
             value={password}
             onChange={e => { setPassword(e.target.value); setError(null); }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            placeholder="Contraseña"
+            placeholder={t('portal_login_password_placeholder')}
             className={`w-full bg-input border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 transition-all ${
               error ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
             }`}
@@ -374,9 +378,9 @@ function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void })
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-4 h-4 border-2 border-primary-foreground/50 border-t-primary-foreground rounded-full animate-spin" />
-                Accediendo...
+                {t('portal_login_btn_loading')}
               </span>
-            ) : 'Acceder'}
+            ) : t('portal_login_btn')}
           </button>
         </div>
       </motion.div>
@@ -387,6 +391,7 @@ function PortalLogin({ onLogin }: { onLogin: (session: PortalSession) => void })
 // ─── Dashboard del reclutador ─────────────────────────────────────────────────
 
 function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogout: () => void }) {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<RecruiterProfile | null>(null);
   const [evaluations, setEvaluations] = useState<PortalEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -478,7 +483,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
     potenciales: evaluations.filter(e => e.status === 'potencial').length,
   }), [evaluations]);
 
-  const recruiterName = profile?.name || session.user.email || 'Reclutador';
+  const recruiterName = profile?.name || session.user.email || t('portal_recruiter_fallback');
 
   return (
     <div className="min-h-screen bg-background">
@@ -488,7 +493,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
           <div className="flex items-center gap-3">
             <MagnetLogo size="sm" />
             <span className="text-muted-foreground/50 text-sm hidden sm:inline">|</span>
-            <span className="text-muted-foreground text-sm hidden sm:inline">Portal Reclutador</span>
+            <span className="text-muted-foreground text-sm hidden sm:inline">{t('portal_header_title')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -497,11 +502,11 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
             <button onClick={fetchData} disabled={loading}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50">
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              Actualizar
+              {t('portal_btn_refresh')}
             </button>
             <button onClick={handleLogout}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50">
-              <LogOut size={13} />Salir
+              <LogOut size={13} />{t('portal_btn_logout')}
             </button>
           </div>
         </div>
@@ -519,17 +524,17 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: 'Mis Candidatos', value: stats.total,        colorClass: 'text-foreground'       },
-            { label: 'Agendados',      value: stats.agendadas,    colorClass: 'text-primary'          },
-            { label: 'Elite',          value: stats.elite,        colorClass: 'text-success'          },
-            { label: 'Calificados',    value: stats.calificados,  colorClass: 'text-warning'          },
-            { label: 'Potenciales',    value: stats.potenciales,  colorClass: 'text-muted-foreground' },
+            { labelKey: 'portal_stat_my_candidates', value: stats.total,        colorClass: 'text-foreground'       },
+            { labelKey: 'portal_stat_scheduled',     value: stats.agendadas,    colorClass: 'text-primary'          },
+            { labelKey: 'portal_stat_elite',         value: stats.elite,        colorClass: 'text-success'          },
+            { labelKey: 'portal_stat_qualified',     value: stats.calificados,  colorClass: 'text-warning'          },
+            { labelKey: 'portal_stat_potential',     value: stats.potenciales,  colorClass: 'text-muted-foreground' },
           ].map((stat, i) => (
-            <motion.div key={stat.label}
+            <motion.div key={stat.labelKey}
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07 }}
               className="glass-card rounded-xl p-4">
-              <p className="text-muted-foreground text-xs mb-1.5">{stat.label}</p>
+              <p className="text-muted-foreground text-xs mb-1.5">{t(stat.labelKey as Parameters<typeof t>[0])}</p>
               <p className={`text-2xl font-bold ${stat.colorClass}`}>
                 {loading
                   ? <span className="inline-block w-8 h-6 bg-muted/50 rounded animate-pulse" />
@@ -545,26 +550,26 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o teléfono..."
+              placeholder={t('portal_search_placeholder')}
               className="w-full bg-input border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
           </div>
           <div className="relative">
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
               className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
-              <option value="all">Todos los estados</option>
-              <option value="elite">Elite</option>
-              <option value="calificado">Calificado</option>
-              <option value="potencial">Potencial</option>
-              <option value="descartado">Descartado</option>
-              <option value="en_progreso">En progreso</option>
+              <option value="all">{t('portal_filter_all')}</option>
+              <option value="elite">{t('portal_filter_elite')}</option>
+              <option value="calificado">{t('portal_filter_calificado')}</option>
+              <option value="potencial">{t('portal_filter_potencial')}</option>
+              <option value="descartado">{t('portal_filter_descartado')}</option>
+              <option value="en_progreso">{t('portal_filter_en_progreso')}</option>
             </select>
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
           {search && (
             <button onClick={() => setSearch('')}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-3 py-2.5 rounded-xl hover:bg-destructive/10 border border-border">
-              <X size={12} />Limpiar
+              <X size={12} />{t('portal_btn_clear')}
             </button>
           )}
         </div>
@@ -574,12 +579,12 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
           <div className="flex items-center gap-2 text-sm">
             <span className="text-foreground font-semibold">{filtered.length}</span>
             <span className="text-muted-foreground">
-              {filtered.length !== evaluations.length ? `de ${evaluations.length} ` : ''}
-              {filtered.length === 1 ? 'candidato' : 'candidatos'}
+              {filtered.length !== evaluations.length ? `${t('portal_of_total', { total: String(evaluations.length) })} ` : ''}
+              {filtered.length === 1 ? t('portal_candidate_singular') : t('portal_candidate_plural')}
             </span>
             {filtered.length !== evaluations.length && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-                filtro activo
+                {t('portal_filter_active')}
               </span>
             )}
           </div>
@@ -591,7 +596,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-muted-foreground text-sm">Cargando candidatos...</p>
+                <p className="text-muted-foreground text-sm">{t('portal_loading_candidates')}</p>
               </div>
             </div>
           ) : (
@@ -599,16 +604,26 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/60">
-                    {['Nombre', 'Teléfono', 'Ubicación', 'Score', 'Resultado', 'Entrevista', 'Fecha'].map(h => (
-                      <th key={h} className="text-left text-muted-foreground font-medium px-4 py-3 text-xs uppercase tracking-wider">{h}</th>
+                    {(
+                      [
+                        'portal_col_name',
+                        'portal_col_phone',
+                        'portal_col_location',
+                        'portal_col_score',
+                        'portal_col_result',
+                        'portal_col_interview',
+                        'portal_col_date',
+                      ] as const
+                    ).map(key => (
+                      <th key={key} className="text-left text-muted-foreground font-medium px-4 py-3 text-xs uppercase tracking-wider">{t(key)}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   <AnimatePresence>
                     {filtered.map((ev, i) => {
-                      const cfg = STATUS_CONFIG[ev.status] || STATUS_CONFIG.descartado;
-                      const intCfg = ev.interview_status ? INTERVIEW_STATUS_CONFIG[ev.interview_status] : null;
+                      const cfg = STATUS_CONFIG_STYLE[ev.status] || STATUS_CONFIG_STYLE.descartado;
+                      const intCfg = ev.interview_status ? INTERVIEW_STATUS_CONFIG_STYLE[ev.interview_status] : null;
                       return (
                         <motion.tr
                           key={ev.session_id}
@@ -627,12 +642,12 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.className}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                              {cfg.label}
+                              {t(cfg.tKey as Parameters<typeof t>[0])}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-xs">
                             {intCfg
-                              ? <span className={`font-medium ${intCfg.color}`}>{intCfg.label}</span>
+                              ? <span className={`font-medium ${intCfg.color}`}>{t(intCfg.tKey as Parameters<typeof t>[0])}</span>
                               : <span className="text-muted-foreground/40">—</span>}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
@@ -650,7 +665,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
                       <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Search size={24} className="text-muted-foreground/40" />
-                          <p>No hay candidatos que coincidan</p>
+                          <p>{t('portal_empty_candidates')}</p>
                         </div>
                       </td>
                     </tr>
@@ -662,7 +677,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
         </div>
 
         <p className="text-center text-xs text-muted-foreground/40">
-          {filtered.length} de {evaluations.length} candidatos · Magnetraffic HR
+          {t('portal_footer', { filtered: String(filtered.length), total: String(evaluations.length) })}
         </p>
 
         {/* Mi Configuración */}
@@ -672,7 +687,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
               onClick={() => setShowConfig(v => !v)}
               className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-foreground hover:bg-muted/20 transition-colors"
             >
-              Mi Configuración
+              {t('portal_config_title')}
               <ChevronDown size={16} className={`text-muted-foreground transition-transform ${showConfig ? 'rotate-180' : ''}`} />
             </button>
             <AnimatePresence>
@@ -687,9 +702,9 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
                   <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       {([
-                        ['Nombre',   profile.name],
-                        ['Label',    profile.label],
-                        ['Asignados totales', String(profile.total_assigned)],
+                        [t('portal_config_name'),           profile.name],
+                        [t('portal_config_label'),          profile.label],
+                        [t('portal_config_total_assigned'), String(profile.total_assigned)],
                       ] as [string, string][]).map(([label, value]) => (
                         <div key={label}>
                           <span className="text-muted-foreground text-xs">{label}</span>
@@ -699,7 +714,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
                     </div>
                     {profile.calendar_url && (
                       <div>
-                        <span className="text-muted-foreground text-xs">URL del calendario</span>
+                        <span className="text-muted-foreground text-xs">{t('portal_config_calendar_url')}</span>
                         <div className="flex items-center gap-2 mt-1">
                           <a href={profile.calendar_url} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-1 text-primary text-xs hover:underline truncate max-w-xs">
@@ -707,7 +722,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
                           </a>
                           <button onClick={handleCopy}
                             className="shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:text-primary text-muted-foreground transition-all">
-                            {copied ? <><Check size={12} className="text-success" />Copiado</> : <><Copy size={12} />Copiar enlace</>}
+                            {copied ? <><Check size={12} className="text-success" />{t('portal_btn_copied')}</> : <><Copy size={12} />{t('portal_btn_copy_link')}</>}
                           </button>
                         </div>
                       </div>

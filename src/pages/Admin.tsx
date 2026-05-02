@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare, TrendingUp } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useAdmin, AdminEvaluation, updateInterviewData, useBriefing, useUpdateHiredStatus, fetchEvaluationDetail } from '@/hooks/useAdmin';
 import { BriefingCard } from '@/components/admin/BriefingCard';
 import { LLMResponseCard } from '@/components/admin/LLMResponseCard';
@@ -27,23 +28,36 @@ interface AdminSession {
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<string, { label: string; className: string; dot: string }> = {
-  elite:       { label: 'ELITE',       className: 'bg-primary/15 text-primary border-primary/40',             dot: 'bg-primary'          },
-  calificado:  { label: 'CALIFICADO',  className: 'bg-success/15 text-success border-success/40',             dot: 'bg-success'          },
-  potencial:   { label: 'POTENCIAL',   className: 'bg-warning/15 text-warning border-warning/40',             dot: 'bg-warning'          },
-  descartado:  { label: 'DESCARTADO',  className: 'bg-destructive/15 text-destructive border-destructive/40', dot: 'bg-destructive'      },
-  en_progreso: { label: 'EN PROGRESO', className: 'bg-muted text-muted-foreground border-border',             dot: 'bg-muted-foreground' },
+const STATUS_CONFIG: Record<string, { labelKey: string; className: string; dot: string }> = {
+  elite:       { labelKey: 'admin_status_elite',       className: 'bg-primary/15 text-primary border-primary/40',             dot: 'bg-primary'          },
+  calificado:  { labelKey: 'admin_status_calificado',  className: 'bg-success/15 text-success border-success/40',             dot: 'bg-success'          },
+  potencial:   { labelKey: 'admin_status_potencial',   className: 'bg-warning/15 text-warning border-warning/40',             dot: 'bg-warning'          },
+  descartado:  { labelKey: 'admin_status_descartado',  className: 'bg-destructive/15 text-destructive border-destructive/40', dot: 'bg-destructive'      },
+  en_progreso: { labelKey: 'admin_status_en_progreso', className: 'bg-muted text-muted-foreground border-border',             dot: 'bg-muted-foreground' },
 };
 
-const INTERVIEW_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  agendada:                  { label: 'Agendada',                  color: 'text-primary'     },
-  entrevistado:              { label: 'Entrevistado',              color: 'text-success'     },
-  no_asistio:                { label: 'No asistió',                color: 'text-destructive' },
-  reprogramado:              { label: 'Reprogramado',              color: 'text-warning'     },
-  rechazado_post_entrevista: { label: 'Rechazado post-entrevista', color: 'text-destructive' },
+const INTERVIEW_STATUS_CONFIG: Record<string, { labelKey: string; color: string }> = {
+  agendada:                  { labelKey: 'admin_interview_agendada',        color: 'text-primary'     },
+  entrevistado:              { labelKey: 'admin_interview_entrevistado',     color: 'text-success'     },
+  no_asistio:                { labelKey: 'admin_interview_no_asistio',       color: 'text-destructive' },
+  reprogramado:              { labelKey: 'admin_interview_reprogramado',     color: 'text-warning'     },
+  rechazado_post_entrevista: { labelKey: 'admin_interview_rechazado_post',   color: 'text-destructive' },
 };
 
-const SCORE_LABELS: Record<string, string> = {
+const SCORE_LABEL_KEYS: Record<string, string> = {
+  E1_cierre:      'admin_score_label_E1_cierre',
+  E1_volumen:     'admin_score_label_E1_volumen',
+  E3_copywriting: 'admin_score_label_E3_copywriting',
+  E4_objeciones:  'admin_score_label_E4_objeciones',
+  E5_autonomia:   'admin_score_label_E5_autonomia',
+  E6_filosofia:   'admin_score_label_E6_filosofia',
+  C1_estabilidad: 'admin_score_label_C1_estabilidad',
+  V1_penalty:     'admin_score_label_V1_penalty',
+  E2_penalty:     'admin_score_label_E2_penalty',
+};
+
+// Static Spanish labels used only in buildSummary (non-UI, no access to t())
+const SCORE_LABELS_ES: Record<string, string> = {
   E1_cierre:      'Cierre directo',
   E1_volumen:     'Volumen llamadas',
   E3_copywriting: 'Copywriting',
@@ -192,7 +206,11 @@ function CVLinks({ candidate }: { candidate: AdminEvaluation }) {
 function buildSummary(c: AdminEvaluation): string {
   const lines: string[] = [];
 
-  const statusLabel = STATUS_CONFIG[c.status]?.label || c.status;
+  const statusLabelsEs: Record<string, string> = {
+    elite: 'ELITE', calificado: 'CALIFICADO', potencial: 'POTENCIAL',
+    descartado: 'DESCARTADO', en_progreso: 'EN PROGRESO',
+  };
+  const statusLabel = statusLabelsEs[c.status] || c.status;
   lines.push(`Resultado: ${statusLabel} — ${c.score_total} puntos.`);
 
   if (c.location) lines.push(`Ubicación: ${c.location}.`);
@@ -204,7 +222,7 @@ function buildSummary(c: AdminEvaluation): string {
     for (const [key, val] of Object.entries(c.score_breakdown)) {
       const max = SCORE_MAX[key] || 25;
       if ((val as number) >= max * 0.8 && (val as number) > 0) {
-        strengths.push(SCORE_LABELS[key] || key);
+        strengths.push(SCORE_LABELS_ES[key] || key);
       }
     }
   }
@@ -268,6 +286,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
   onClose: () => void;
   onUpdate: (updated: Partial<AdminEvaluation>) => void;
 }) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ModalTab>('candidato');
   const [interviewStatus, setInterviewStatus] = useState(candidateProp.interview_status || '');
   const [interviewDate, setInterviewDate]     = useState(
@@ -335,7 +354,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
     setSaving(true);
     const result = await updateInterviewData(candidateProp.id, patch);
     if (result.error) {
-      toast.error(`Error al guardar: ${result.error}`);
+      toast.error(t('admin_modal_save_error', { error: result.error }));
     }
     onUpdate(patch);
     setSaving(false);
@@ -391,11 +410,11 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
   const autonomyScore     = (sb.E5_autonomia as number) ?? 0;
 
   const TABS: { id: ModalTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'candidato',  label: 'Candidato',  icon: <User size={14} />        },
-    { id: 'resumen',    label: 'Resumen',    icon: <FileText size={14} />    },
-    { id: 'qa',         label: 'Respuestas', icon: <MessageSquare size={14} /> },
-    { id: 'score',      label: 'Evaluación', icon: <BarChart2 size={14} />   },
-    { id: 'entrevista', label: 'Entrevista', icon: <Calendar size={14} />    },
+    { id: 'candidato',  label: t('admin_modal_tab_candidate'), icon: <User size={14} />        },
+    { id: 'resumen',    label: t('admin_modal_tab_summary'),   icon: <FileText size={14} />    },
+    { id: 'qa',         label: t('admin_modal_tab_answers'),   icon: <MessageSquare size={14} /> },
+    { id: 'score',      label: t('admin_modal_tab_score'),     icon: <BarChart2 size={14} />   },
+    { id: 'entrevista', label: t('admin_modal_tab_interview'), icon: <Calendar size={14} />    },
   ];
 
   return (
@@ -421,7 +440,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
             <div className="flex items-center flex-wrap gap-2 mt-1">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.className} print:border-black print:text-black print:bg-white`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} print:bg-black`} />
-                {cfg.label}
+                {t(cfg.labelKey)}
               </span>
               <span className="text-muted-foreground text-xs print:text-black">
                 Score: <strong className="text-foreground print:text-black">{candidate.score_total} pts</strong>
@@ -434,7 +453,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               )}
               {candidate.interview_status && (
                 <span className={`text-xs font-medium ${INTERVIEW_STATUS_CONFIG[candidate.interview_status]?.color || ''} print:text-black`}>
-                  · {INTERVIEW_STATUS_CONFIG[candidate.interview_status]?.label || candidate.interview_status}
+                  · {INTERVIEW_STATUS_CONFIG[candidate.interview_status]?.labelKey ? t(INTERVIEW_STATUS_CONFIG[candidate.interview_status].labelKey) : candidate.interview_status}
                 </span>
               )}
             </div>
@@ -445,7 +464,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-muted/50 transition-colors"
             >
               <Printer size={13} />
-              Imprimir / PDF
+              {t('admin_modal_print_btn')}
             </button>
             <button
               onClick={onClose}
@@ -471,7 +490,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               {tab.icon}{tab.label}
             </button>
           ))}
-          {saving && <span className="ml-auto text-xs text-muted-foreground self-center">Guardando...</span>}
+          {saving && <span className="ml-auto text-xs text-muted-foreground self-center">{t('admin_modal_saving')}</span>}
         </div>
 
         {/* Content */}
@@ -484,7 +503,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               {detailLoading && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
-                  Cargando detalle completo...
+                  {t('admin_modal_loading_detail')}
                 </div>
               )}
 
@@ -519,7 +538,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               {(reactivationMsg || objectionResponse || autonomyDesc) && (
                 <div className="space-y-3">
                   <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider">
-                    Respuestas LLM-evaluadas
+                    {t('admin_modal_llm_responses_title')}
                   </h4>
                   <LLMResponseCard
                     icon="📨"
@@ -567,17 +586,17 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
             <div className="space-y-5 print:block">
               {/* Datos personales */}
               <div>
-                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Datos del Candidato</h4>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">{t('admin_modal_candidate_data_title')}</h4>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-muted/20 rounded-xl p-4 text-sm print:bg-white print:border print:border-black print:p-3">
                   {[
-                    ['Teléfono',       candidate.phone],
-                    ['Email',          candidate.email],
-                    ['Ubicación',      candidate.location],
-                    ['Edad',           candidate.age],
-                    ['Estado civil',   candidate.marital_status],
-                    ['Llamadas/día',   candidate.daily_calls],
-                    ['Último ingreso', candidate.last_income ? `$${candidate.last_income.toLocaleString()}` : null],
-                    ['Evaluación',     new Date(candidate.created_at).toLocaleString('es-MX')],
+                    [t('admin_modal_field_phone'),       candidate.phone],
+                    [t('admin_modal_field_email'),       candidate.email],
+                    [t('admin_modal_field_location'),    candidate.location],
+                    [t('admin_modal_field_age'),         candidate.age],
+                    [t('admin_modal_field_marital'),     candidate.marital_status],
+                    [t('admin_modal_field_calls_day'),   candidate.daily_calls],
+                    [t('admin_modal_field_last_income'), candidate.last_income ? `$${candidate.last_income.toLocaleString()}` : null],
+                    [t('admin_modal_field_eval_date'),   new Date(candidate.created_at).toLocaleString('es-MX')],
                   ].map(([label, value]) => (
                     <div key={label as string}>
                       <span className="text-muted-foreground text-xs print:text-black">{label}</span>
@@ -591,7 +610,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
 
               {/* Resumen automático */}
               <div>
-                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Resumen del Perfil</h4>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">{t('admin_modal_profile_summary_title')}</h4>
                 <p className="text-muted-foreground text-sm bg-muted/10 rounded-xl p-4 leading-relaxed print:text-black print:bg-white print:border print:border-black print:p-3">
                   {summary}
                 </p>
@@ -600,7 +619,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               {/* Razón de salida */}
               {candidate.exit_reason && (
                 <div>
-                  <h4 className="text-foreground font-semibold mb-2 text-sm print:text-black">Razón de salida del último trabajo</h4>
+                  <h4 className="text-foreground font-semibold mb-2 text-sm print:text-black">{t('admin_modal_exit_reason_title')}</h4>
                   <p className="text-muted-foreground text-sm bg-muted/20 rounded-xl p-3 leading-relaxed print:text-black print:bg-white print:border print:border-black">
                     {candidate.exit_reason}
                   </p>
@@ -610,7 +629,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               {/* Highlight */}
               {candidate.highlight && (
                 <div>
-                  <h4 className="text-foreground font-semibold mb-2 text-sm print:text-black">Mejor Mensaje de Reactivación</h4>
+                  <h4 className="text-foreground font-semibold mb-2 text-sm print:text-black">{t('admin_modal_best_reactivation_title')}</h4>
                   <p className="text-muted-foreground text-sm bg-primary/5 border border-primary/20 rounded-xl p-3 leading-relaxed italic print:text-black print:bg-white print:border-black">
                     "{candidate.highlight}"
                   </p>
@@ -625,7 +644,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
           {/* ── TAB: RESPUESTAS ── */}
           {activeTab === 'qa' && (
             <div className="space-y-3 print:block">
-              <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider print:text-black">Preguntas y Respuestas</h4>
+              <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider print:text-black">{t('admin_modal_qa_title')}</h4>
               {hasAnswers ? (
                 Object.entries(candidate.answers!).map(([key, value]) => {
                   if (!value) return null;
@@ -638,8 +657,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
                 })
               ) : (
                 <p className="text-muted-foreground text-sm bg-muted/10 rounded-xl p-4">
-                  Esta evaluación no tiene respuestas detalladas guardadas.
-                  Las respuestas completas se guardan a partir de hoy en evaluaciones nuevas.
+                  {t('admin_modal_qa_empty')}
                 </p>
               )}
             </div>
@@ -650,12 +668,12 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
             <div className="space-y-5 print:block">
               {/* Score breakdown */}
               <div>
-                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Desglose de Score</h4>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">{t('admin_modal_score_breakdown_title')}</h4>
                 <div className="space-y-2.5 bg-muted/10 rounded-xl p-4 print:border print:border-black print:rounded-none">
                   {candidate.score_breakdown && Object.entries(candidate.score_breakdown).map(([key, val]) => (
                     <ScoreBar
                       key={key}
-                      label={SCORE_LABELS[key] || key}
+                      label={SCORE_LABEL_KEYS[key] ? t(SCORE_LABEL_KEYS[key]) : key}
                       value={val as number}
                       max={SCORE_MAX[key] || 25}
                     />
@@ -665,7 +683,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
 
               {/* Criterios de evaluación */}
               <div>
-                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Criterios Aplicados</h4>
+                <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">{t('admin_modal_score_criteria_title')}</h4>
                 <div className="space-y-2">
                   {candidate.score_breakdown && Object.entries(candidate.score_breakdown).map(([key, val]) => {
                     const criteria = SCORE_CRITERIA[key];
@@ -674,7 +692,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
                     const label = criteria[score] || criteria[String(score)] || `${score} pts`;
                     return (
                       <div key={key} className="flex items-start gap-3 text-sm bg-muted/10 rounded-lg p-3 print:border print:border-black print:rounded-none print:mb-1">
-                        <span className="text-muted-foreground w-36 shrink-0 print:text-black">{SCORE_LABELS[key] || key}</span>
+                        <span className="text-muted-foreground w-36 shrink-0 print:text-black">{SCORE_LABEL_KEYS[key] ? t(SCORE_LABEL_KEYS[key]) : key}</span>
                         <span className={`flex-1 print:text-black ${score < 0 ? 'text-destructive' : score === 0 ? 'text-warning' : 'text-foreground'}`}>
                           {label}
                         </span>
@@ -690,7 +708,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               {/* Flags */}
               {candidate.flags && Object.entries(candidate.flags).some(([, v]) => v) && (
                 <div>
-                  <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">Flags Detectados</h4>
+                  <h4 className="text-foreground font-semibold mb-3 text-sm uppercase tracking-wider print:text-black">{t('admin_modal_score_flags_title')}</h4>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(candidate.flags).filter(([, v]) => v).map(([key]) => (
                       <span key={key} className="px-3 py-1 rounded-full bg-warning/15 text-warning text-xs border border-warning/30 print:text-black print:bg-white print:border-black">
@@ -704,7 +722,7 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
               {/* Descarte */}
               {candidate.disqualify_reason && (
                 <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 print:border-black print:bg-white">
-                  <h4 className="text-destructive font-semibold mb-1 text-sm print:text-black">Razón de Descarte</h4>
+                  <h4 className="text-destructive font-semibold mb-1 text-sm print:text-black">{t('admin_modal_score_discard_title')}</h4>
                   <p className="text-destructive/80 text-sm print:text-black">{candidate.disqualify_reason.replace(/_/g, ' ')}</p>
                 </div>
               )}
@@ -714,50 +732,50 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
           {/* ── TAB: ENTREVISTA ── */}
           {activeTab === 'entrevista' && (
             <div className="space-y-5 print:block">
-              <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider print:text-black">Gestión de Entrevista</h4>
+              <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider print:text-black">{t('admin_modal_interview_title')}</h4>
 
               {/* Reclutador asignado */}
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Reclutador asignado</label>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">{t('admin_modal_interview_recruiter_label')}</label>
                 <div className="relative print:hidden">
                   <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <input
                     type="text"
                     value={assignedTo}
                     onChange={e => handleAssignedToChange(e.target.value)}
-                    placeholder="Nombre del reclutador..."
+                    placeholder={t('admin_modal_interview_recruiter_placeholder')}
                     className="w-full bg-input border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
                 <p className="hidden print:block text-sm text-black border border-black p-3 rounded">
-                  {assignedTo || 'Sin asignar'}
+                  {assignedTo || t('admin_modal_interview_unassigned')}
                 </p>
               </div>
 
               {/* Estado de la entrevista */}
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Estado de la entrevista</label>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">{t('admin_modal_interview_status_label')}</label>
                 <div className="relative print:hidden">
                   <select
                     value={interviewStatus}
                     onChange={e => handleStatusChange(e.target.value)}
                     className="w-full appearance-none bg-input border border-border rounded-xl px-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   >
-                    <option value="">— Sin estado —</option>
-                    {Object.entries(INTERVIEW_STATUS_CONFIG).map(([val, { label }]) => (
-                      <option key={val} value={val}>{label}</option>
+                    <option value="">{t('admin_modal_interview_no_status')}</option>
+                    {Object.entries(INTERVIEW_STATUS_CONFIG).map(([val, { labelKey }]) => (
+                      <option key={val} value={val}>{t(labelKey)}</option>
                     ))}
                   </select>
                   <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
                 <p className="hidden print:block text-sm text-black">
-                  {interviewStatus ? INTERVIEW_STATUS_CONFIG[interviewStatus]?.label : 'Sin estado'}
+                  {interviewStatus ? t(INTERVIEW_STATUS_CONFIG[interviewStatus]?.labelKey) : t('admin_modal_interview_print_no_status')}
                 </p>
               </div>
 
               {/* Fecha de entrevista */}
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Fecha de entrevista</label>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">{t('admin_modal_interview_date_label')}</label>
                 <input
                   type="datetime-local"
                   value={interviewDate}
@@ -767,17 +785,17 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
                 <p className="hidden print:block text-sm text-black">
                   {interviewDate
                     ? new Date(interviewDate).toLocaleString('es-MX')
-                    : 'Sin fecha asignada'}
+                    : t('admin_modal_interview_no_date')}
                 </p>
               </div>
 
               {/* Notas del reclutador */}
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block print:text-black">Notas del reclutador</label>
+                <label className="text-xs text-muted-foreground mb-1 block print:text-black">{t('admin_modal_interview_notes_label')}</label>
                 <textarea
                   value={recruiterNotes}
                   onChange={e => handleNotesChange(e.target.value)}
-                  placeholder="Observaciones post-entrevista, impresiones, próximos pasos..."
+                  placeholder={t('admin_modal_interview_notes_placeholder')}
                   rows={5}
                   className="w-full bg-input border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none print:hidden"
                 />
@@ -807,6 +825,7 @@ function toBool(v: boolean | number | undefined | null): boolean {
 }
 
 function RecruiterPanel() {
+  const { t } = useLanguage();
   const [recruiters, setRecruiters] = useState<Recruiter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -875,7 +894,7 @@ function RecruiterPanel() {
   const handleAdd = async () => {
     setAddError(null);
     if (!newRecruiter.name || !newRecruiter.label || !newRecruiter.calendar_url) {
-      setAddError('Nombre, label y URL del calendario son requeridos.');
+      setAddError(t('admin_recruiter_add_error_required'));
       return;
     }
     try {
@@ -912,10 +931,10 @@ function RecruiterPanel() {
 
       {/* Resumen de pesos */}
       <div className="glass-card rounded-xl p-4 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Suma de pesos activos:</span>
+        <span className="text-muted-foreground">{t('admin_recruiter_weights_label')}</span>
         <span className={`font-bold ${activeWeightSum > 100 ? 'text-destructive' : 'text-primary'}`}>
           {activeWeightSum} / 100
-          {activeWeightSum > 100 && <span className="ml-2 text-xs text-destructive">(¡supera 100%!)</span>}
+          {activeWeightSum > 100 && <span className="ml-2 text-xs text-destructive">{t('admin_recruiter_weights_over')}</span>}
         </span>
       </div>
 
@@ -925,7 +944,17 @@ function RecruiterPanel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/60">
-                {['Nombre', 'Label', 'Calendario', 'Peso %', 'Total Asig.', '% Real', 'Estado', 'Distribución', 'Acciones'].map(h => (
+                {[
+                  t('admin_recruiter_col_name'),
+                  t('admin_recruiter_col_label'),
+                  t('admin_recruiter_col_calendar'),
+                  t('admin_recruiter_col_weight'),
+                  t('admin_recruiter_col_total'),
+                  t('admin_recruiter_col_real_pct'),
+                  t('admin_recruiter_col_status'),
+                  t('admin_recruiter_col_distribution'),
+                  t('admin_recruiter_col_actions'),
+                ].map(h => (
                   <th key={h} className="text-left text-muted-foreground font-medium px-4 py-3 text-xs uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -969,7 +998,7 @@ function RecruiterPanel() {
                             ? 'bg-success/15 text-success border-success/40 hover:bg-success/25'
                             : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
                         }`}>
-                        {r.active ? 'Activo' : 'Inactivo'}
+                        {r.active ? t('admin_recruiter_active') : t('admin_recruiter_inactive')}
                       </button>
                     </td>
                     <td className="px-4 py-3 min-w-[120px]">
@@ -995,17 +1024,17 @@ function RecruiterPanel() {
                         <div className="flex items-center gap-1">
                           <button onClick={() => saveEdit(r.id)} disabled={saving}
                             className="px-2.5 py-1 rounded-lg bg-primary/15 text-primary text-xs font-medium hover:bg-primary/25 transition-all disabled:opacity-50">
-                            {saving ? '...' : 'Guardar'}
+                            {saving ? '...' : t('admin_recruiter_btn_save')}
                           </button>
                           <button onClick={cancelEdit}
                             className="px-2.5 py-1 rounded-lg bg-muted text-muted-foreground text-xs hover:bg-muted/70 transition-all">
-                            Cancelar
+                            {t('admin_recruiter_btn_cancel')}
                           </button>
                         </div>
                       ) : (
                         <button onClick={() => startEdit(r)}
                           className="px-2.5 py-1 rounded-lg bg-muted text-muted-foreground text-xs hover:border-primary/50 hover:text-primary border border-border transition-all">
-                          Editar
+                          {t('admin_recruiter_btn_edit')}
                         </button>
                       )}
                     </td>
@@ -1015,7 +1044,7 @@ function RecruiterPanel() {
               {recruiters.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground text-sm">
-                    No hay reclutadores configurados aún.
+                    {t('admin_recruiter_empty')}
                   </td>
                 </tr>
               )}
@@ -1029,35 +1058,35 @@ function RecruiterPanel() {
         {!showAddForm ? (
           <button onClick={() => setShowAddForm(true)}
             className="shimmer-btn gold-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-full text-sm transition-all hover:opacity-90 active:scale-[0.98]">
-            + Agregar reclutador
+            {t('admin_recruiter_btn_add')}
           </button>
         ) : (
           <div className="glass-card rounded-xl p-5 space-y-4">
-            <h4 className="text-foreground font-semibold text-sm">Nuevo reclutador</h4>
+            <h4 className="text-foreground font-semibold text-sm">{t('admin_recruiter_add_title')}</h4>
             {addError && (
               <p className="text-destructive text-xs flex items-center gap-1"><AlertCircle size={12} />{addError}</p>
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nombre</label>
+                <label className="text-xs text-muted-foreground mb-1 block">{t('admin_recruiter_field_name_label')}</label>
                 <input value={newRecruiter.name} onChange={e => setNewRecruiter(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Ej: María González"
+                  placeholder={t('admin_recruiter_field_name_placeholder')}
                   className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Label</label>
+                <label className="text-xs text-muted-foreground mb-1 block">{t('admin_recruiter_field_label_label')}</label>
                 <input value={newRecruiter.label} onChange={e => setNewRecruiter(p => ({ ...p, label: e.target.value }))}
-                  placeholder="Ej: Reclutador 3"
+                  placeholder={t('admin_recruiter_field_label_placeholder')}
                   className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
               <div className="col-span-2">
-                <label className="text-xs text-muted-foreground mb-1 block">URL del calendario</label>
+                <label className="text-xs text-muted-foreground mb-1 block">{t('admin_recruiter_field_calendar_label')}</label>
                 <input value={newRecruiter.calendar_url} onChange={e => setNewRecruiter(p => ({ ...p, calendar_url: e.target.value }))}
                   placeholder="https://..."
                   className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Peso %</label>
+                <label className="text-xs text-muted-foreground mb-1 block">{t('admin_recruiter_field_weight_label')}</label>
                 <input type="number" min={0} max={100} value={newRecruiter.weight} onChange={e => setNewRecruiter(p => ({ ...p, weight: Number(e.target.value) }))}
                   className="w-full bg-input border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
@@ -1065,11 +1094,11 @@ function RecruiterPanel() {
             <div className="flex gap-2">
               <button onClick={handleAdd}
                 className="shimmer-btn gold-gradient text-primary-foreground font-semibold px-5 py-2 rounded-full text-sm transition-all hover:opacity-90">
-                Guardar
+                {t('admin_recruiter_btn_save')}
               </button>
               <button onClick={() => { setShowAddForm(false); setAddError(null); }}
                 className="px-5 py-2 rounded-full text-sm text-muted-foreground hover:text-foreground border border-border hover:border-border/70 transition-all">
-                Cancelar
+                {t('admin_recruiter_btn_cancel')}
               </button>
             </div>
           </div>
@@ -1082,6 +1111,7 @@ function RecruiterPanel() {
 // ─── Login (backend Express + JWT) ────────────────────────────────────────────
 
 function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -1089,7 +1119,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      setError('Ingresa tu email y contraseña.');
+      setError(t('admin_login_error_empty'));
       return;
     }
     setLoading(true);
@@ -1101,8 +1131,8 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
     } catch (e) {
       setLoading(false);
       const msg = e instanceof ApiError
-        ? (e.status === 401 ? 'Credenciales incorrectas.' : (e.message || 'Error al iniciar sesión.'))
-        : 'Error al iniciar sesión.';
+        ? (e.status === 401 ? t('admin_login_error_credentials') : (e.message || t('admin_login_error_generic')))
+        : t('admin_login_error_generic');
       setError(msg);
     }
   };
@@ -1119,15 +1149,15 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
         className="glass-card rounded-2xl p-8 max-w-sm w-full relative"
       >
         <div className="flex justify-center mb-8"><MagnetLogo size="lg" /></div>
-        <h2 className="text-foreground font-bold text-xl text-center mb-1">Panel de Administración</h2>
-        <p className="text-muted-foreground text-sm text-center mb-8">Acceso restringido · Magnetraffic</p>
+        <h2 className="text-foreground font-bold text-xl text-center mb-1">{t('admin_login_title')}</h2>
+        <p className="text-muted-foreground text-sm text-center mb-8">{t('admin_login_subtitle')}</p>
         <div className="space-y-3">
           <input
             type="email"
             value={email}
             onChange={e => { setEmail(e.target.value); setError(null); }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            placeholder="tu@email.com"
+            placeholder={t('admin_login_email_placeholder')}
             autoFocus
             className="w-full bg-input border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
@@ -1136,7 +1166,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
             value={password}
             onChange={e => { setPassword(e.target.value); setError(null); }}
             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            placeholder="Contraseña"
+            placeholder={t('admin_login_password_placeholder')}
             className={`w-full bg-input border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 transition-all ${
               error ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
             }`}
@@ -1152,7 +1182,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
             disabled={loading}
             className="shimmer-btn w-full gold-gradient text-primary-foreground font-semibold py-3 rounded-full transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           >
-            {loading ? 'Validando...' : 'Acceder al Panel'}
+            {loading ? t('admin_login_btn_loading') : t('admin_login_btn')}
           </button>
         </div>
       </motion.div>
@@ -1163,6 +1193,7 @@ function LoginScreen({ onLogin }: { onLogin: (session: AdminSession) => void }) 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Admin() {
+  const { t } = useLanguage();
   const [session, setSession] = useState<AdminSession | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores' | 'empresas' | 'analytics'>('candidatos');
@@ -1297,11 +1328,11 @@ export default function Admin() {
             <button onClick={refetch} disabled={loading}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50">
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              Actualizar
+              {t('admin_btn_refresh')}
             </button>
             <button onClick={handleLogout}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted/50">
-              Salir
+              {t('admin_btn_logout')}
             </button>
           </div>
         </div>
@@ -1312,10 +1343,10 @@ export default function Admin() {
         {/* Tab switcher */}
         <div className="flex gap-2 border-b border-border pb-0">
           {([
-            ['candidatos',  'Candidatos',   null],
-            ['reclutadores','Reclutadores', null],
-            ['empresas',    'Empresas',     null],
-            ['analytics',   'Analytics',    <TrendingUp size={14} key="a" />],
+            ['candidatos',  t('admin_tab_candidates'), null],
+            ['reclutadores',t('admin_tab_recruiters'), null],
+            ['empresas',    t('admin_tab_companies'),  null],
+            ['analytics',   t('admin_tab_analytics'),  <TrendingUp size={14} key="a" />],
           ] as [string, string, React.ReactNode][]).map(([tab, label, icon]) => (
             <button key={tab} onClick={() => setActiveTab(tab as 'candidatos' | 'reclutadores' | 'empresas' | 'analytics')}
               className={`flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium capitalize transition-all border-b-2 -mb-px ${
@@ -1333,7 +1364,7 @@ export default function Admin() {
             <RecruiterPanel />
             <div>
               <h2 className="text-foreground font-semibold text-sm uppercase tracking-wider mb-4 border-t border-border/60 pt-6">
-                Asignación por Empresa
+                {t('admin_company_assignment_title')}
               </h2>
               <RecruitersWithCompanies />
             </div>
@@ -1354,19 +1385,19 @@ export default function Admin() {
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive">
             <AlertCircle size={16} />
-            <span>Error al cargar datos: {error}</span>
-            <button onClick={refetch} className="ml-auto underline hover:no-underline">Reintentar</button>
+            <span>{t('admin_error_loading', { error: error ?? '' })}</span>
+            <button onClick={refetch} className="ml-auto underline hover:no-underline">{t('admin_btn_retry')}</button>
           </motion.div>
         )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: 'Total',          value: stats.total,        suffix: '',     colorClass: 'text-foreground'       },
-            { label: 'Hoy',            value: stats.todayCount,   suffix: '',     colorClass: 'text-primary'          },
-            { label: 'Calificados',    value: stats.qualifiedPct, suffix: '%',    colorClass: 'text-success'          },
-            { label: 'Descartados',    value: stats.discardedPct, suffix: '%',    colorClass: 'text-destructive'      },
-            { label: 'Duración prom.', value: stats.avgDuration,  suffix: ' min', colorClass: 'text-muted-foreground' },
+            { label: t('admin_stat_total'),        value: stats.total,        suffix: '',     colorClass: 'text-foreground'       },
+            { label: t('admin_stat_today'),        value: stats.todayCount,   suffix: '',     colorClass: 'text-primary'          },
+            { label: t('admin_stat_qualified'),    value: stats.qualifiedPct, suffix: '%',    colorClass: 'text-success'          },
+            { label: t('admin_stat_discarded'),    value: stats.discardedPct, suffix: '%',    colorClass: 'text-destructive'      },
+            { label: t('admin_stat_avg_duration'), value: stats.avgDuration,  suffix: ' min', colorClass: 'text-muted-foreground' },
           ].map((stat, i) => (
             <motion.div key={stat.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07 }}
@@ -1389,19 +1420,19 @@ export default function Admin() {
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por nombre, teléfono o email..."
+                placeholder={t('admin_search_placeholder')}
                 className="w-full bg-input border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               />
             </div>
             <div className="relative">
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
                 className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
-                <option value="all">Todos los estados</option>
-                <option value="elite">Elite</option>
-                <option value="calificado">Calificado</option>
-                <option value="potencial">Potencial</option>
-                <option value="descartado">Descartado</option>
-                <option value="en_progreso">En progreso</option>
+                <option value="all">{t('admin_filter_all_statuses')}</option>
+                <option value="elite">{t('admin_filter_elite')}</option>
+                <option value="calificado">{t('admin_filter_calificado')}</option>
+                <option value="potencial">{t('admin_filter_potencial')}</option>
+                <option value="descartado">{t('admin_filter_descartado')}</option>
+                <option value="en_progreso">{t('admin_filter_en_progreso')}</option>
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
@@ -1409,7 +1440,7 @@ export default function Admin() {
               <div className="relative">
                 <select value={recruiterFilter} onChange={e => setRecruiterFilter(e.target.value)}
                   className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
-                  <option value="all">Todos los reclutadores</option>
+                  <option value="all">{t('admin_filter_all_recruiters')}</option>
                   {recruiters.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -1421,10 +1452,10 @@ export default function Admin() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Presets rápidos */}
             {[
-              { label: 'Hoy',         preset: 'today'     as const },
-              { label: 'Ayer',        preset: 'yesterday' as const },
-              { label: 'Esta semana', preset: 'week'      as const },
-              { label: 'Este mes',    preset: 'month'     as const },
+              { label: t('admin_filter_today'),      preset: 'today'     as const },
+              { label: t('admin_filter_yesterday'),  preset: 'yesterday' as const },
+              { label: t('admin_filter_this_week'),  preset: 'week'      as const },
+              { label: t('admin_filter_this_month'), preset: 'month'     as const },
             ].map(({ label, preset }) => (
               <button key={preset} onClick={() => applyDatePreset(preset)}
                 className="text-xs px-3 py-1.5 rounded-lg border border-border bg-input hover:border-primary/50 hover:text-primary text-muted-foreground transition-all">
@@ -1454,7 +1485,7 @@ export default function Admin() {
               <button onClick={() => { setDateFrom(''); setDateTo(''); }}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/10">
                 <X size={12} />
-                Limpiar
+                {t('admin_btn_clear_dates')}
               </button>
             )}
           </div>
@@ -1465,12 +1496,12 @@ export default function Admin() {
           <div className="flex items-center gap-2 text-sm">
             <span className="text-foreground font-semibold">{filtered.length}</span>
             <span className="text-muted-foreground">
-              {filtered.length !== evaluations.length ? `de ${evaluations.length} ` : ''}
-              {filtered.length === 1 ? 'evaluación' : 'evaluaciones'}
+              {filtered.length !== evaluations.length ? `${t('admin_count_of', { total: evaluations.length })} ` : ''}
+              {filtered.length === 1 ? t('admin_count_evaluation_singular') : t('admin_count_evaluation_plural')}
             </span>
             {filtered.length !== evaluations.length && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-                filtro activo
+                {t('admin_filter_active')}
               </span>
             )}
           </div>
@@ -1482,7 +1513,7 @@ export default function Admin() {
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-muted-foreground text-sm">Cargando evaluaciones...</p>
+                <p className="text-muted-foreground text-sm">{t('admin_loading_evaluations')}</p>
               </div>
             </div>
           ) : (
@@ -1490,7 +1521,7 @@ export default function Admin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/60">
-                    {['Nombre', 'Teléfono', 'Ubicación', 'Score', 'Resultado', 'Reclutador', 'Entrevista', 'Fecha', ''].map(h => (
+                    {[t('admin_col_name'), t('admin_col_phone'), t('admin_col_location'), t('admin_col_score'), t('admin_col_result'), t('admin_col_recruiter'), t('admin_col_interview'), t('admin_col_date'), ''].map(h => (
                       <th key={h} className="text-left text-muted-foreground font-medium px-4 py-3 text-xs uppercase tracking-wider">
                         {h}
                       </th>
@@ -1520,7 +1551,7 @@ export default function Admin() {
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.className}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                              {cfg.label}
+                              {t(cfg.labelKey)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
@@ -1528,7 +1559,7 @@ export default function Admin() {
                           </td>
                           <td className="px-4 py-3 text-xs">
                             {intCfg
-                              ? <span className={`font-medium ${intCfg.color}`}>{intCfg.label}</span>
+                              ? <span className={`font-medium ${intCfg.color}`}>{t(intCfg.labelKey)}</span>
                               : <span className="text-muted-foreground/40">—</span>}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs">
@@ -1538,7 +1569,7 @@ export default function Admin() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-primary text-xs opacity-0 group-hover:opacity-100 transition-opacity">Ver →</span>
+                            <span className="text-primary text-xs opacity-0 group-hover:opacity-100 transition-opacity">{t('admin_btn_view')}</span>
                           </td>
                         </motion.tr>
                       );
@@ -1549,7 +1580,7 @@ export default function Admin() {
                       <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Search size={24} className="text-muted-foreground/40" />
-                          <p>No hay evaluaciones que coincidan</p>
+                          <p>{t('admin_empty_evaluations')}</p>
                         </div>
                       </td>
                     </tr>
@@ -1561,7 +1592,7 @@ export default function Admin() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground/40 pb-4">
-          {filtered.length} de {evaluations.length} evaluaciones · Magnetraffic HR
+          {t('admin_footer', { filtered: filtered.length, total: evaluations.length })}
         </p>
 
         </>)}
