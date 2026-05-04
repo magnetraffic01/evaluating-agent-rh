@@ -301,6 +301,38 @@ const translations = {
     metrics_trend_avg: 'Promedio: {n}/día',
     metrics_empty: 'Sin datos en este rango',
 
+    // Insights — Pendientes accionables
+    insights_pending_title: 'Pendientes accionables del día',
+    insights_pending_urgent: 'Urgentes',
+    insights_pending_followup: 'Próximas entrevistas (48h)',
+    insights_pending_no_contact: 'Recién asignados (<24h)',
+    insights_pending_assigned_ago: 'Asignado hace {hours}h sin agendar',
+    insights_pending_in_hours: 'En {hours}h',
+    insights_pending_received_ago: 'hace {hours}h',
+    insights_pending_empty: 'Nada pendiente acá',
+    // Insights — Calidad de leads
+    insights_quality_title: 'Calidad de tus leads',
+    insights_quality_team: 'equipo',
+    insights_quality_empty: 'Aún sin candidatos asignados.',
+    // Insights — Velocidad
+    insights_velocity_title: 'Velocidad del closer',
+    insights_velocity_to_schedule: 'Asignación → Agendada',
+    insights_velocity_to_hire: 'Agendada → Contratado',
+    insights_velocity_avg_score: 'Score promedio de tus hires',
+    insights_velocity_team: 'equipo: {value}',
+    insights_velocity_faster: '{percent}% más rápido',
+    insights_velocity_slower: '{percent}% más lento',
+    insights_velocity_empty: 'Aún no tienes entrevistas agendadas para medir velocidad.',
+    // Insights — Perfil de cierres
+    insights_breakdown_title: 'Perfil de tus cierres',
+    insights_breakdown_bucket_elite: '110+ pts (Elite)',
+    insights_breakdown_bucket_calificado: '90-109 pts',
+    insights_breakdown_bucket_potencial: '80-89 pts',
+    insights_breakdown_insight_elite: 'Tus hires son mayormente Elite ({n}/{total}). Vendés mejor a leads premium.',
+    insights_breakdown_insight_calificado: 'Cierras bien los Calificado ({n}/{total}). Tu fuerte está en el rango medio.',
+    insights_breakdown_insight_mixed: 'Cierras parejo en todos los niveles. Versátil.',
+    insights_breakdown_insight_empty: 'Aún no tienes hires registrados. Cuando empieces a contratar, acá verás el patrón.',
+
     // Status labels (badge)
     portal_status_elite: 'ELITE',
     portal_status_calificado: 'CALIFICADO',
@@ -883,6 +915,38 @@ const translations = {
     metrics_trend_total: 'Total: {n}',
     metrics_trend_avg: 'Average: {n}/day',
     metrics_empty: 'No data in this range',
+
+    // Insights — Actionable pending
+    insights_pending_title: "Today's actionable items",
+    insights_pending_urgent: 'Urgent',
+    insights_pending_followup: 'Upcoming interviews (48h)',
+    insights_pending_no_contact: 'Recently assigned (<24h)',
+    insights_pending_assigned_ago: 'Assigned {hours}h ago, not scheduled',
+    insights_pending_in_hours: 'in {hours}h',
+    insights_pending_received_ago: '{hours}h ago',
+    insights_pending_empty: 'Nothing pending here',
+    // Insights — Lead quality
+    insights_quality_title: 'Your lead quality',
+    insights_quality_team: 'team',
+    insights_quality_empty: 'No assigned candidates yet.',
+    // Insights — Velocity
+    insights_velocity_title: 'Closer velocity',
+    insights_velocity_to_schedule: 'Assigned → Scheduled',
+    insights_velocity_to_hire: 'Scheduled → Hired',
+    insights_velocity_avg_score: 'Avg score of your hires',
+    insights_velocity_team: 'team: {value}',
+    insights_velocity_faster: '{percent}% faster',
+    insights_velocity_slower: '{percent}% slower',
+    insights_velocity_empty: 'No interviews scheduled yet to measure velocity.',
+    // Insights — Hire breakdown
+    insights_breakdown_title: 'Your closing profile',
+    insights_breakdown_bucket_elite: '110+ pts (Elite)',
+    insights_breakdown_bucket_calificado: '90-109 pts',
+    insights_breakdown_bucket_potencial: '80-89 pts',
+    insights_breakdown_insight_elite: 'Your hires are mostly Elite ({n}/{total}). You sell better to premium leads.',
+    insights_breakdown_insight_calificado: 'You close Qualified leads well ({n}/{total}). Your strength is the mid-range.',
+    insights_breakdown_insight_mixed: 'You close evenly across all levels. Versatile.',
+    insights_breakdown_insight_empty: "No hires logged yet. Once you start hiring, you'll see the pattern here.",
 
     // Status labels (badge)
     portal_status_elite: 'ELITE',

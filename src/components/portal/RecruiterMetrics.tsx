@@ -2,9 +2,14 @@
 // Dashboard de métricas para el portal del reclutador.
 // Recibe la lista completa de evaluaciones y la filtra por rango de tiempo.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { recruiterAnalytics, type TeamStatsResponse } from '@/lib/api';
+import PendingActions from '@/components/portal/insights/PendingActions';
+import LeadQuality from '@/components/portal/insights/LeadQuality';
+import CloserVelocity from '@/components/portal/insights/CloserVelocity';
+import HireBreakdown from '@/components/portal/insights/HireBreakdown';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +67,11 @@ function inRange(ev: RecruiterMetricsEvaluation, from: Date | null): boolean {
 export default function RecruiterMetrics({ evaluations }: Props) {
   const { t } = useLanguage();
   const [range, setRange] = useState<RangeKey>('30d');
+  const [insights, setInsights] = useState<TeamStatsResponse | null>(null);
+
+  useEffect(() => {
+    recruiterAnalytics.teamStats().then(setInsights).catch(() => setInsights(null));
+  }, []);
 
   const from = useMemo(() => rangeStart(range), [range]);
 
@@ -350,6 +360,18 @@ export default function RecruiterMetrics({ evaluations }: Props) {
           </div>
         </motion.div>
       </div>
+
+      {/* ─── 5. Insights: Pendientes accionables ─────────────────────────── */}
+      <PendingActions data={insights?.pending} />
+
+      {/* ─── 6. Insights: Calidad + Velocidad ────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <LeadQuality mine={insights?.mine} team={insights?.team} />
+        <CloserVelocity mine={insights?.mine} team={insights?.team} />
+      </div>
+
+      {/* ─── 7. Insights: Perfil de cierres ──────────────────────────────── */}
+      <HireBreakdown hires={insights?.hires ?? []} />
     </div>
   );
 }

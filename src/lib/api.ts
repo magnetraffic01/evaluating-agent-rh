@@ -540,6 +540,60 @@ export const analytics = {
   },
 };
 
+// ─── Recruiter Analytics — team-stats (insights dashboard) ───────────────────
+
+export interface ScopeStats {
+  total: number;
+  by_status: { elite: number; calificado: number; potencial: number; descartado: number };
+  lead_quality: {
+    elite_pct: number;
+    calificado_pct: number;
+    potencial_pct: number;
+    descartado_pct: number;
+  } | null;
+  hired: number;
+  scheduled: number;
+  hire_rate: number;
+  avg_score_hired: number | null;
+  avg_to_schedule_hours: number | null;
+  avg_to_hire_hours: number | null;
+}
+
+export interface PendingItem {
+  id: string;
+  name: string;
+  phone: string;
+  score_total: number;
+  status: 'elite' | 'calificado' | 'potencial' | 'en_progreso' | 'descartado';
+  created_at: string;
+  interview_date?: string;
+  company: 'trebolife' | 'traduce' | null;
+}
+
+export interface PendingBlob {
+  urgent: PendingItem[];
+  followup: PendingItem[];
+  no_contact: PendingItem[];
+}
+
+export interface HireScoreRow {
+  score: number;
+  status: string;
+}
+
+export interface TeamStatsResponse {
+  team: ScopeStats;
+  mine: ScopeStats | null;
+  pending: PendingBlob | null;
+  hires: HireScoreRow[] | null;
+}
+
+export const recruiterAnalytics = {
+  teamStats(): Promise<TeamStatsResponse> {
+    return api.get<TeamStatsResponse>('/api/hr/analytics/team-stats');
+  },
+};
+
 // ─── Step tracking + briefing trigger (Phase 3 - Agent C) ───
 
 export interface StepEventPayload {
