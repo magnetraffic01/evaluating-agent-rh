@@ -588,9 +588,41 @@ export interface TeamStatsResponse {
   hires: HireScoreRow[] | null;
 }
 
+// ─── Gamification (FASE 9) ───────────────────────────────────────────────────
+
+export interface LeaderboardEntry {
+  label: string;       // recruiter's label (used to compare with self)
+  name: string;
+  hire_count: number;  // hires this month
+  monthly_goal: number;
+}
+
+export interface StreakInfo {
+  current: number;              // consecutive days with ≥1 hire (counting from today)
+  best: number;                 // best historical streak
+  last_hire_at: string | null;  // YYYY-MM-DD of last hire
+}
+
+export interface ProjectionInfo {
+  actual: number;        // hires this month so far
+  projected: number;     // estimated end-of-month based on current pace
+  goal: number;          // monthly_goal from hr_recruiters (default 6)
+  days_passed: number;
+  days_in_month: number;
+}
+
+export interface GamificationResponse {
+  leaderboard: LeaderboardEntry[];   // top 10 of the month
+  my_streak: StreakInfo | null;      // only when caller is recruiter
+  my_projection: ProjectionInfo | null;
+}
+
 export const recruiterAnalytics = {
   teamStats(): Promise<TeamStatsResponse> {
     return api.get<TeamStatsResponse>('/api/hr/analytics/team-stats');
+  },
+  gamification(): Promise<GamificationResponse> {
+    return api.get<GamificationResponse>('/api/hr/analytics/gamification');
   },
 };
 

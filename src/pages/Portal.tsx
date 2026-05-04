@@ -529,7 +529,7 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
         )}
 
         {/* Stats / Metrics dashboard */}
-        <RecruiterMetrics evaluations={evaluations} />
+        <RecruiterMetrics evaluations={evaluations} myLabel={recruiterLabel} />
 
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">

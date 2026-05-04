@@ -5,11 +5,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { recruiterAnalytics, type TeamStatsResponse } from '@/lib/api';
+import { recruiterAnalytics, type TeamStatsResponse, type GamificationResponse } from '@/lib/api';
 import PendingActions from '@/components/portal/insights/PendingActions';
 import LeadQuality from '@/components/portal/insights/LeadQuality';
 import CloserVelocity from '@/components/portal/insights/CloserVelocity';
 import HireBreakdown from '@/components/portal/insights/HireBreakdown';
+import Streak from '@/components/portal/insights/Streak';
+import Projection from '@/components/portal/insights/Projection';
+import Leaderboard from '@/components/portal/insights/Leaderboard';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +37,8 @@ export interface RecruiterMetricsEvaluation {
 
 interface Props {
   evaluations: RecruiterMetricsEvaluation[];
+  /** El label del reclutador logueado, para destacarlo en el leaderboard. */
+  myLabel?: string | null;
 }
 
 type RangeKey = 'today' | '7d' | '30d' | 'all';
@@ -64,13 +69,20 @@ function inRange(ev: RecruiterMetricsEvaluation, from: Date | null): boolean {
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
-export default function RecruiterMetrics({ evaluations }: Props) {
+export default function RecruiterMetrics({ evaluations, myLabel }: Props) {
   const { t } = useLanguage();
   const [range, setRange] = useState<RangeKey>('30d');
   const [insights, setInsights] = useState<TeamStatsResponse | null>(null);
+  const [gamification, setGamification] = useState<GamificationResponse | null>(null);
 
   useEffect(() => {
-    recruiterAnalytics.teamStats().then(setInsights).catch(() => setInsights(null));
+    Promise.allSettled([
+      recruiterAnalytics.teamStats(),
+      recruiterAnalytics.gamification(),
+    ]).then(([teamRes, gameRes]) => {
+      if (teamRes.status === 'fulfilled') setInsights(teamRes.value);
+      if (gameRes.status === 'fulfilled') setGamification(gameRes.value);
+    });
   }, []);
 
   const from = useMemo(() => rangeStart(range), [range]);
@@ -372,6 +384,18 @@ export default function RecruiterMetrics({ evaluations }: Props) {
 
       {/* ─── 7. Insights: Perfil de cierres ──────────────────────────────── */}
       <HireBreakdown hires={insights?.hires ?? []} />
+
+      {/* ─── 8. FASE 9: Gamification — Streak + Projection lado a lado ───── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Streak data={gamification?.my_streak ?? null} />
+        <Projection data={gamification?.my_projection ?? null} />
+      </div>
+
+      {/* ─── 9. FASE 9: Gamification — Leaderboard a todo el ancho ───────── */}
+      <Leaderboard
+        entries={gamification?.leaderboard ?? []}
+        myLabel={myLabel ?? null}
+      />
     </div>
   );
 }
