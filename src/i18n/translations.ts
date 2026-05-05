@@ -662,6 +662,24 @@ const translations = {
     admin_qa_lang_bilingual: 'Bilingüe (ES/EN)',
     admin_modal_loom_btn: 'Ver video Loom (60s)',
 
+    // ─── Email con link de calendario ───────────────────────────────────────
+    admin_modal_email_title: 'Enviar correo con link de cita',
+    admin_modal_email_subtitle: 'Envía al candidato un correo con el calendario de su reclutadora asignada para que agende (o reagende) la cita.',
+    admin_modal_email_btn_open: 'Componer correo',
+    admin_modal_email_btn_send: 'Enviar correo',
+    admin_modal_email_btn_cancel: 'Cancelar',
+    admin_modal_email_sending: 'Enviando…',
+    admin_modal_email_message_placeholder: 'Mensaje opcional para incluir en el correo (ej: "Hola Juan, te dejo nuevamente el link de mi calendario para que puedas agendar.")',
+    admin_modal_email_destination: 'Destino: {email} · calendario de {recruiter}',
+    admin_modal_email_sent: 'Correo enviado a {email} ✓',
+    admin_modal_email_warning_no_email: 'El candidato no tiene email registrado.',
+    admin_modal_email_warning_no_recruiter: 'No hay reclutadora asignada al candidato.',
+    admin_modal_email_err_no_email: 'Error: el candidato no tiene email.',
+    admin_modal_email_err_no_recruiter: 'Error: no hay reclutadora asignada.',
+    admin_modal_email_err_no_calendar: 'Error: la reclutadora no tiene calendar URL.',
+    admin_modal_email_err_not_configured: 'El servicio de email no está configurado en el backend (EVENTS_WEBHOOK_URL).',
+    admin_modal_email_err_generic: 'No se pudo enviar el correo.',
+
     // ─── Analytics panel ────────────────────────────────────────────────────
     admin_analytics_title: 'Analytics del Funnel',
     admin_analytics_company_all: 'Todas',
@@ -1394,6 +1412,24 @@ const translations = {
     admin_qa_lang_es_only: 'Spanish only',
     admin_qa_lang_bilingual: 'Bilingual (ES/EN)',
     admin_modal_loom_btn: 'Watch Loom video (60s)',
+
+    // ─── Email with calendar link ───────────────────────────────────────────
+    admin_modal_email_title: 'Send email with calendar link',
+    admin_modal_email_subtitle: 'Send the candidate an email with their assigned recruiter\'s calendar link so they can book (or rebook) the interview.',
+    admin_modal_email_btn_open: 'Compose email',
+    admin_modal_email_btn_send: 'Send email',
+    admin_modal_email_btn_cancel: 'Cancel',
+    admin_modal_email_sending: 'Sending…',
+    admin_modal_email_message_placeholder: 'Optional message to include (e.g., "Hi John, sending the calendar link again so you can book.")',
+    admin_modal_email_destination: 'To: {email} · calendar of {recruiter}',
+    admin_modal_email_sent: 'Email sent to {email} ✓',
+    admin_modal_email_warning_no_email: 'Candidate has no email on file.',
+    admin_modal_email_warning_no_recruiter: 'No recruiter assigned to this candidate.',
+    admin_modal_email_err_no_email: 'Error: candidate has no email.',
+    admin_modal_email_err_no_recruiter: 'Error: no recruiter assigned.',
+    admin_modal_email_err_no_calendar: 'Error: recruiter has no calendar URL.',
+    admin_modal_email_err_not_configured: 'Email service not configured in backend (EVENTS_WEBHOOK_URL).',
+    admin_modal_email_err_generic: 'Could not send the email.',
 
     // ─── Analytics panel ────────────────────────────────────────────────────
     admin_analytics_title: 'Funnel Analytics',

@@ -18,7 +18,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   X, ChevronDown, ExternalLink, Printer, Calendar, User, FileText,
-  BarChart2, MessageSquare, Video,
+  BarChart2, MessageSquare, Video, Mail, Send,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -29,7 +29,7 @@ import { BriefingCard } from '@/components/admin/BriefingCard';
 import { LLMResponseCard } from '@/components/admin/LLMResponseCard';
 import { HiredStatusButtons } from '@/components/admin/HiredStatusButtons';
 import { toast } from 'sonner';
-import { ApiError, API_BASE_URL, type HiredStatus } from '@/lib/api';
+import { ApiError, API_BASE_URL, evaluations as apiEvaluations, type HiredStatus } from '@/lib/api';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -454,6 +454,32 @@ export default function CandidateDetailModal({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Estado del envío de email con link de calendario
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+  const [showEmailComposer, setShowEmailComposer] = useState(false);
+
+  const handleSendCalendarEmail = async () => {
+    setSendingEmail(true);
+    try {
+      const res = await apiEvaluations.sendCalendarEmail(candidate.id, emailMessage || undefined);
+      toast.success(t('admin_modal_email_sent', { email: res.sent_to }));
+      setShowEmailComposer(false);
+      setEmailMessage('');
+    } catch (e) {
+      const msg = e instanceof ApiError
+        ? (e.code === 'no_candidate_email'        ? t('admin_modal_email_err_no_email')
+          : e.code === 'no_recruiter_assigned'    ? t('admin_modal_email_err_no_recruiter')
+          : e.code === 'recruiter_has_no_calendar'? t('admin_modal_email_err_no_calendar')
+          : e.code === 'email_service_not_configured' ? t('admin_modal_email_err_not_configured')
+          : (e.message || t('admin_modal_email_err_generic')))
+        : t('admin_modal_email_err_generic');
+      toast.error(msg);
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const cfg = STATUS_CONFIG[candidate.status] || STATUS_CONFIG.descartado;
@@ -907,6 +933,83 @@ export default function CandidateDetailModal({
                     ? new Date(interviewDate).toLocaleString('es-MX')
                     : t('admin_modal_interview_no_date')}
                 </p>
+              </div>
+
+              {/* Enviar email con link de calendario */}
+              <div className="border border-border/50 rounded-xl p-4 bg-muted/10 print:hidden">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                    <Mail size={16} className="text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="text-sm font-semibold text-foreground mb-0.5">
+                      {t('admin_modal_email_title')}
+                    </h5>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {t('admin_modal_email_subtitle')}
+                    </p>
+                    {!showEmailComposer ? (
+                      <button
+                        onClick={() => setShowEmailComposer(true)}
+                        disabled={!candidate.email || !candidate.assigned_to}
+                        className="flex items-center gap-2 text-xs gold-gradient text-primary-foreground font-medium px-4 py-2 rounded-full transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Send size={12} />
+                        {t('admin_modal_email_btn_open')}
+                      </button>
+                    ) : (
+                      <div className="space-y-2">
+                        <textarea
+                          value={emailMessage}
+                          onChange={e => setEmailMessage(e.target.value)}
+                          placeholder={t('admin_modal_email_message_placeholder')}
+                          rows={3}
+                          className="w-full bg-input border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
+                          maxLength={2000}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleSendCalendarEmail}
+                            disabled={sendingEmail}
+                            className="flex items-center gap-2 text-xs gold-gradient text-primary-foreground font-medium px-4 py-2 rounded-full transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+                          >
+                            {sendingEmail ? (
+                              <>
+                                <span className="w-3 h-3 border border-primary-foreground/50 border-t-primary-foreground rounded-full animate-spin" />
+                                {t('admin_modal_email_sending')}
+                              </>
+                            ) : (
+                              <>
+                                <Send size={12} />
+                                {t('admin_modal_email_btn_send')}
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => { setShowEmailComposer(false); setEmailMessage(''); }}
+                            disabled={sendingEmail}
+                            className="text-xs text-muted-foreground hover:text-foreground px-3 py-2 rounded-full transition-colors"
+                          >
+                            {t('admin_modal_email_btn_cancel')}
+                          </button>
+                        </div>
+                        <p className="text-xs text-muted-foreground/70">
+                          {t('admin_modal_email_destination', {
+                            email: candidate.email || '—',
+                            recruiter: candidate.assigned_to || '—',
+                          })}
+                        </p>
+                      </div>
+                    )}
+                    {(!candidate.email || !candidate.assigned_to) && (
+                      <p className="text-xs text-warning mt-2 flex items-center gap-1.5">
+                        ⚠️ {!candidate.email
+                          ? t('admin_modal_email_warning_no_email')
+                          : t('admin_modal_email_warning_no_recruiter')}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Notas */}

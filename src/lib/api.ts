@@ -379,6 +379,17 @@ export const evaluations = {
       { anonymous: !!opts?.anonymous }
     );
   },
+  /**
+   * Dispara un email al candidato con el link del calendario de la
+   * reclutadora asignada (admin o recruiter). El backend valida que
+   * exista email + reclutadora + calendar_url.
+   */
+  sendCalendarEmail(id: string, message?: string) {
+    return api.post<{ ok: true; sent_to: string; via: string; recruiter_calendar: string }>(
+      `/api/hr/evaluations/${encodeURIComponent(id)}/send-calendar-email`,
+      { message: message || null },
+    );
+  },
 };
 
 export const recruiters = {
