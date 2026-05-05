@@ -64,7 +64,7 @@ const translations = {
     // Step 4 — Income
     income_title: 'Tu historial de resultados',
     income_description:
-      '¿Cuánto ganabas en comisiones en un buen mes? Y cuéntame, ¿cómo terminó esa etapa?',
+      '¿Cuál era tu PROMEDIO mensual de comisiones (no el mejor mes — el promedio real)? Y cuéntame, ¿cómo terminó esa etapa?',
     income_label: 'Ingresos en comisiones (USD o equivalente)',
     income_exit_label: '¿Cómo terminó esa experiencia?',
     income_exit_placeholder: 'Sé honesto, es parte de la evaluación...',
@@ -117,7 +117,8 @@ const translations = {
       '{name}, ¿cuántos empleos o proyectos distintos has tenido en los últimos 3 años?',
     stability_1: '1 trabajo o proyecto',
     stability_2: '2 trabajos o proyectos',
-    stability_3: '3 o más trabajos o proyectos',
+    stability_3_4: '3 a 4 trabajos o proyectos',
+    stability_5_plus: '5 o más trabajos o proyectos',
 
     // Step 11 — Financial
     financial_title: 'Última pregunta',
@@ -218,6 +219,23 @@ const translations = {
     basic_less40: 'No, tengo menos de 40 horas',
     basic_email_label: 'Correo electrónico',
     basic_email_placeholder: 'tu@email.com',
+    basic_language_label: '¿En qué idioma cierras mejor con clientes hispanos en EE.UU.?',
+    basic_language_es_only: 'Solo español',
+    basic_language_bilingual: 'Español + inglés (puedo cerrar en ambos)',
+
+    // FASE 10 — InboundOpen (slot step 8 reusado para trebolife/traduce)
+    inbound_title: 'Apertura de llamada inbound',
+    inbound_description:
+      'Imagina que recibís una llamada inbound: una persona dejó sus datos online interesada en el **Servicio de Bienestar Familiar** — membresía mensual de $29 con descuentos médicos y dentales para toda la familia. Se conecta. Vos sos quien atiende.\n\n¿Qué decís en los **primeros 60 segundos** de la llamada? Escribilo literal, como si lo estuvieras diciendo.',
+    inbound_placeholder: 'Hola, gracias por interesarte... — escribilo literal',
+    inbound_chars: '{count} / 600 caracteres',
+
+    // FASE 10 — CV: pestaña Loom adicional
+    cv_tab_loom: 'Video Loom (60s)',
+    cv_loom_label: 'URL de tu video Loom',
+    cv_loom_placeholder: 'https://www.loom.com/share/...',
+    cv_loom_help: 'Grabá un video de 60s presentándote y vendiendo el Servicio de Bienestar Familiar como si fuera real. Pegá la URL pública aquí.',
+    cv_loom_invalid: 'La URL debe ser de loom.com',
     basic_description_trebolife:
       'Hola {name}. Para closer de Trebolife necesitamos confirmar 3 cosas:\n\n• Desde dónde nos escribes\n• Tu correo (para enviarte la información del proceso)\n• Que tengas 40+ horas semanales reales (la cuota mínima es 5 ventas/día)',
 
@@ -225,11 +243,11 @@ const translations = {
       'En Trebolife vendes seguros de salud accesibles ($14-$45/mes) por suscripción.\n\nCuéntame:\n• ¿Has cerrado SUSCRIPCIONES recurrentes (seguros, telecom, gym, software)?\n• ¿Cuánto duraba en promedio tu cliente sin cancelar?\n• ¿Vendiste a familias hispanas en EE.UU. antes?',
 
     objection_setup_trebolife:
-      'Estás en una llamada con un prospecto. Le presentaste el plan Health Plus de Trebolife ($29.99/mes) y te dice:',
+      'Estás vendiendo el Servicio de Bienestar Familiar ($29/mes — descuentos médicos y dentales para la familia). El prospecto te dice:',
     objection_quote_trebolife:
-      '💬 "Mira, agradezco la llamada pero ya tengo Obamacare, no necesito otro seguro"',
+      '💬 "Mira, agradezco la llamada pero ya tengo mi seguro y no necesito otra cosa más"',
     objection_description_trebolife:
-      '¿Qué le respondes EXACTAMENTE? Escribe la frase real que dirías en la llamada — no el concepto, las palabras.',
+      '¿Qué le respondés exactamente? Como si estuvieras en la llamada — las palabras literales, no el concepto.',
 
     // Step 11 — Ramp-up (Trebolife)
     ramp_title: 'Velocidad de arranque',
@@ -243,11 +261,11 @@ const translations = {
     // Step 12 — Churn resistance (Trebolife)
     churn_title: 'Cierre con FIT vs cierre con presión',
     churn_scenario:
-      'Cerraste el plan Dental con María. Pagó el primer mes y, antes del 2do pago, cancela diciendo: "no lo estoy usando, no me sirve".',
+      'Cerraste a María una membresía del Servicio de Bienestar Familiar ($29/mes). Pagó el primer mes. Antes del segundo cobro cancela diciendo: "no lo estoy usando, no me sirve".',
     churn_question:
       '¿Qué hubieras hecho DISTINTO en la llamada inicial para que María llegara feliz al mes 6? Sé concreto: ¿qué pregunta no le hiciste? ¿qué expectativa no aclaraste? ¿qué le prometiste de más?',
     churn_placeholder:
-      'Ej: en la llamada no le pregunté si ya tiene dentista de cabecera. Si no usa el seguro porque no tiene a quién acudir...',
+      'Ej: en la llamada no le pregunté qué descuentos usaría primero. Sin saber qué necesidad real cubría...',
     churn_hint: 'Esta respuesta la lee la reclutadora — sé honesto, no genérico.',
 
     // ─── Portal (FASE 6 i18n) ──────────────────────
@@ -612,11 +630,11 @@ const translations = {
       'Cliente pidió cotización hace 1 mes y no ha respondido más.\n\nEscríbeme el mensaje REAL que le mandarías el día de hoy para reactivarlo. No el concepto — el mensaje literal que le enviarías por WhatsApp o email.',
 
     objection_setup_traduce:
-      'Estás en una llamada con un prospecto. Le presentaste el paquete de 3 documentos por $95 y te dijo que lo pensaba. Han pasado 8 días y no ha respondido. Hoy lo llamás y te dice:',
+      'Estás vendiendo el Servicio de Bienestar Familiar ($29/mes — descuentos médicos y dentales para la familia). El prospecto te dice:',
     objection_quote_traduce:
-      '💬 "Déjame pensarlo y te aviso cuando esté listo"',
+      '💬 "Mira, agradezco la llamada pero ya tengo mi seguro y no necesito otra cosa más"',
     objection_description_traduce:
-      '¿Qué hacés exactamente ese día 8? Escribe las palabras reales que dirías — no el concepto, la frase literal.',
+      '¿Qué le respondés exactamente? Como si estuvieras en la llamada — las palabras literales, no el concepto.',
 
     autonomy_description_traduce:
       'Trabajando 100% en remoto con 80+ leads activos en distintas etapas (algunos pidieron cotización, otros dijeron "después", otros llevan semanas sin responder), ¿cómo organizás tu pipeline para no perder a ninguno?',
@@ -630,14 +648,14 @@ const translations = {
     ramp_month_2_traduce: 'Mes 2 (necesito un mes completo de práctica y feedback)',
     ramp_month_3_plus_traduce: 'Mes 3 o más (necesito tiempo para aprender desde cero)',
 
-    // Step 12 — Retention (Traduce — reutiliza churn_title, escenario nuevo)
-    churn_title_traduce: 'Retención y recurrencia de clientes',
+    // Step 12 — Retention (Traduce — reusa el producto simulado)
+    churn_title_traduce: 'Cierre con FIT vs cierre con presión',
     churn_scenario_traduce:
-      'Carlos terminó su trámite de naturalización. Pagó $95 por 3 documentos, quedó feliz con el servicio.',
+      'Cerraste a María una membresía del Servicio de Bienestar Familiar ($29/mes). Pagó el primer mes. Antes del segundo cobro cancela diciendo: "no lo estoy usando, no me sirve".',
     churn_question_traduce:
-      '¿Cómo lo convertís en cliente recurrente? Sé concreto: ¿qué le dirías en ese momento? ¿cuándo y cómo lo re-contactarías? ¿qué trámite futuro le mencionarías?',
+      '¿Qué hubieras hecho DISTINTO en la llamada inicial para que María llegara feliz al mes 6? Sé concreto: ¿qué pregunta no le hiciste? ¿qué expectativa no aclaraste? ¿qué le prometiste de más?',
     churn_placeholder_traduce:
-      'Ej: al terminar le pregunto si tiene familia que también necesite documentos. Le explico que el próximo trámite de renovación lo puede agendar ya con descuento...',
+      'Ej: en la llamada no le pregunté qué descuentos usaría primero. Sin saber qué necesidad real cubría...',
   },
 
   en: {
@@ -703,7 +721,7 @@ const translations = {
     // Step 4 — Income
     income_title: 'Your results history',
     income_description:
-      'How much did you earn in commissions in a good month? And tell me, how did that experience end?',
+      'What was your AVERAGE monthly commission (not the best month — the real average)? And tell me, how did that role end?',
     income_label: 'Commission earnings (USD or equivalent)',
     income_exit_label: 'How did that experience end?',
     income_exit_placeholder: "Be honest, it's part of the evaluation...",
@@ -756,7 +774,8 @@ const translations = {
       '{name}, how many different jobs or projects have you had in the last 3 years?',
     stability_1: '1 job or project',
     stability_2: '2 jobs or projects',
-    stability_3: '3 or more jobs or projects',
+    stability_3_4: '3 to 4 jobs or projects',
+    stability_5_plus: '5 or more jobs or projects',
 
     // Step 11 — Financial
     financial_title: 'Last question',
@@ -856,6 +875,23 @@ const translations = {
     basic_less40: 'No, I have less than 40 hours',
     basic_email_label: 'Email address',
     basic_email_placeholder: 'you@email.com',
+    basic_language_label: 'Which language do you close best with US Hispanic clients?',
+    basic_language_es_only: 'Spanish only',
+    basic_language_bilingual: 'Spanish + English (I can close in both)',
+
+    // FASE 10 — InboundOpen (step slot 8 reused for trebolife/traduce)
+    inbound_title: 'Inbound call opening',
+    inbound_description:
+      'Imagine you receive an inbound call: someone left their info online interested in the **Family Wellness Service** — $29/month membership for medical and dental discounts for the whole family. They get on the line. You answer.\n\nWhat do you say in the **first 60 seconds** of the call? Write it literally, as if you were saying it.',
+    inbound_placeholder: 'Hi, thanks for your interest... — write it literally',
+    inbound_chars: '{count} / 600 characters',
+
+    // FASE 10 — CV: additional Loom tab
+    cv_tab_loom: 'Loom video (60s)',
+    cv_loom_label: 'Your Loom video URL',
+    cv_loom_placeholder: 'https://www.loom.com/share/...',
+    cv_loom_help: 'Record a 60s video introducing yourself and selling the Family Wellness Service as if it were real. Paste the public URL here.',
+    cv_loom_invalid: 'The URL must be from loom.com',
     basic_description_trebolife:
       "Hi {name}. To be a Trebolife closer we need to confirm 3 things:\n\n• Where you're writing from\n• Your email (so we can send you process info)\n• That you actually have 40+ hours per week (minimum quota is 5 sales/day)",
 
@@ -863,11 +899,11 @@ const translations = {
       'At Trebolife you sell accessible health insurance ($14-$45/mo) on a subscription basis.\n\nTell me:\n• Have you closed RECURRING subscriptions (insurance, telecom, gym, software)?\n• On average, how long did your client stay before cancelling?\n• Have you sold to Hispanic families in the US before?',
 
     objection_setup_trebolife:
-      "You're on a call with a prospect. You've pitched the Trebolife Health Plus plan ($29.99/mo) and they say:",
+      "You're selling the Family Wellness Service ($29/mo — medical and dental discounts for the family). The prospect tells you:",
     objection_quote_trebolife:
-      "💬 \"Look, I appreciate the call but I already have Obamacare, I don't need another insurance\"",
+      "💬 \"Look, I appreciate the call but I already have my insurance and I don't need anything else\"",
     objection_description_trebolife:
-      'What do you respond EXACTLY? Write the real phrase you would say on the call — not the concept, the actual words.',
+      'What do you respond exactly? As if you were on the call — the literal words, not the concept.',
 
     ramp_title: 'Ramp-up speed',
     ramp_description:
@@ -879,11 +915,11 @@ const translations = {
 
     churn_title: 'Closing with FIT vs closing with pressure',
     churn_scenario:
-      'You closed the Dental plan with Maria. She paid the first month and, before the 2nd payment, cancels saying: "I\'m not using it, it\'s not useful for me".',
+      'You closed Maria on a Family Wellness Service membership ($29/mo). She paid the first month. Before the second charge she cancels saying: "I\'m not using it, it\'s not useful for me".',
     churn_question:
       'What would you have done DIFFERENTLY on the initial call so Maria would have made it happily to month 6? Be concrete: what question did you not ask? what expectation did you not clarify? what did you over-promise?',
     churn_placeholder:
-      "E.g.: on the call I didn't ask if she has a regular dentist. If she's not using it because she has no one to go to...",
+      "E.g.: on the call I didn't ask which discounts she would use first. Without knowing what real need it covered...",
     churn_hint: "The recruiter reads this — be honest, don't go generic.",
 
     // ─── Portal (FASE 6 i18n) ──────────────────────
@@ -1248,11 +1284,11 @@ const translations = {
       "A client requested a quote 1 month ago and hasn't responded since.\n\nWrite the REAL message you would send them today to reactivate them. Not the concept — the literal message you'd send via WhatsApp or email.",
 
     objection_setup_traduce:
-      "You're on a call with a prospect. You pitched a 3-document package for $95 and they said they'd think about it. 8 days have passed with no response. Today you call them and they say:",
+      "You're selling the Family Wellness Service ($29/mo — medical and dental discounts for the family). The prospect tells you:",
     objection_quote_traduce:
-      '💬 "Let me think about it and I\'ll let you know when I\'m ready"',
+      "💬 \"Look, I appreciate the call but I already have my insurance and I don't need anything else\"",
     objection_description_traduce:
-      "What do you do exactly on day 8? Write the real words you would say — not the concept, the literal phrase.",
+      'What do you respond exactly? As if you were on the call — the literal words, not the concept.',
 
     autonomy_description_traduce:
       'Working 100% remotely with 80+ active leads at different stages (some requested a quote, others said "later", others haven\'t responded in weeks), how do you organize your pipeline to avoid losing any of them?',
@@ -1266,14 +1302,14 @@ const translations = {
     ramp_month_2_traduce: 'Month 2 (I need a full month of practice and feedback)',
     ramp_month_3_plus_traduce: 'Month 3 or more (I need time to learn from scratch)',
 
-    // Step 12 — Retention (Traduce)
-    churn_title_traduce: 'Client retention and recurrence',
+    // Step 12 — Retention (Traduce — reuses simulated product)
+    churn_title_traduce: 'Closing with FIT vs closing with pressure',
     churn_scenario_traduce:
-      'Carlos finished his naturalization process. He paid $95 for 3 documents and was happy with the service.',
+      'You closed Maria on a Family Wellness Service membership ($29/mo). She paid the first month. Before the second charge she cancels saying: "I\'m not using it, it\'s not useful for me".',
     churn_question_traduce:
-      'How do you turn him into a recurring client? Be specific: what would you say to him at that moment? When and how would you follow up? What future paperwork would you mention?',
+      'What would you have done DIFFERENTLY on the initial call so Maria would have made it happily to month 6? Be concrete: what question did you not ask? what expectation did you not clarify? what did you over-promise?',
     churn_placeholder_traduce:
-      "E.g.: when we finish I ask if he has family that also needs documents. I explain that his next renewal can be booked now with a discount...",
+      "E.g.: on the call I didn't ask which discounts she would use first. Without knowing what real need it covered...",
   },
 } as const;
 

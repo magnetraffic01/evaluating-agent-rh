@@ -14,6 +14,7 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
   const [location, setLocation] = useState('');
   const [availability, setAvailability] = useState('');
   const [email, setEmail] = useState('');
+  const [languagePref, setLanguagePref] = useState<'es' | 'es_en' | ''>('');
 
   const isTrebolife = company === 'trebolife';
   const isTraduce = company === 'traduce';
@@ -44,11 +45,13 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
   const submitDisabled =
     !location.trim() ||
     !availability ||
-    (isFullTimeCompany && !isEmailValid(email));
+    (isFullTimeCompany && !isEmailValid(email)) ||
+    (isFullTimeCompany && !languagePref);
 
   const handleClick = () => {
     if (!location.trim() || !availability) return;
     if (isFullTimeCompany && !isEmailValid(email)) return;
+    if (isFullTimeCompany && !languagePref) return;
     if (availability === disqualifyValue) {
       onDisqualify('sin_disponibilidad');
       return;
@@ -57,9 +60,17 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
       location: location.trim(),
       availability,
     };
-    if (isFullTimeCompany) payload.email = email.trim();
+    if (isFullTimeCompany) {
+      payload.email = email.trim();
+      payload.languagePref = languagePref;
+    }
     onNext(payload);
   };
+
+  const languageOptions: Array<{ value: 'es' | 'es_en'; label: string }> = [
+    { value: 'es',    label: t('basic_language_es_only') },
+    { value: 'es_en', label: t('basic_language_bilingual') },
+  ];
 
   return (
     <div className="glass-card rounded-xl p-6 sm:p-8 max-w-2xl mx-auto">
@@ -135,6 +146,47 @@ export default function BasicInfoStep({ name, onNext, onDisqualify, company }: P
             ))}
           </div>
         </div>
+
+        {isFullTimeCompany && (
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-3">
+              {t('basic_language_label')}
+            </label>
+            <div className="space-y-2">
+              {languageOptions.map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    languagePref === opt.value
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/40'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="languagePref"
+                    value={opt.value}
+                    checked={languagePref === opt.value}
+                    onChange={() => setLanguagePref(opt.value)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      languagePref === opt.value
+                        ? 'border-primary'
+                        : 'border-muted-foreground/40'
+                    }`}
+                  >
+                    {languagePref === opt.value && (
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <span className="text-foreground text-sm">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <button

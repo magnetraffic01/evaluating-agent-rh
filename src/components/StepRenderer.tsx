@@ -18,6 +18,7 @@ import FinancialStep from './steps/FinancialStep';
 import PreRegistrationStep from './steps/PreRegistrationStep';
 import ChurnResistanceStep from './steps/ChurnResistanceStep';
 import CVStep from './steps/CVStep';
+import InboundOpenStep from './steps/InboundOpenStep';
 
 interface StepRendererProps {
   step: number;
@@ -48,7 +49,12 @@ export default function StepRenderer({ step, state, onNext, onDisqualify }: Step
       case 5: return <ReactivationStep onNext={onNext} onDisqualify={onDisqualify} company={company} />;
       case 6: return <ObjectionStep onNext={onNext} onDisqualify={onDisqualify} company={company} />;
       case 7: return <AutonomyStep onNext={onNext} company={company} />;
-      case 8: return <PhilosophyStep onNext={onNext} />;
+      case 8:
+        // FASE 10: trebolife/traduce reusan slot 8 con InboundOpenStep
+        // (el legacy PhilosophyStep solo se ve en company === null).
+        return (isTrebolife || isTraduce)
+          ? <InboundOpenStep onNext={onNext} />
+          : <PhilosophyStep onNext={onNext} />;
       case 9: return <VerificationStep dailyCalls={state.dailyCalls} onNext={onNext} />;
       case 10: return <StabilityStep name={state.name} onNext={onNext} />;
       case 11: return <FinancialStep onNext={onNext} onDisqualify={onDisqualify} company={company} />;

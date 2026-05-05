@@ -252,7 +252,12 @@ export default function Evaluate() {
         break;
       }
 
-      case 8: { // Philosophy
+      case 8: { // Philosophy (legacy) | InboundOpen (trebolife/traduce, FASE 10)
+        if (state.company === 'trebolife' || state.company === 'traduce') {
+          // InboundOpen es texto libre — se guarda sin scoring automático.
+          // (Pendiente: scoring LLM en fase futura si valida señal.)
+          break;
+        }
         const score = scorePhilosophy(data.philosophy, data.philosophyExplanation);
         const penalty = philosophyPenalty(data.philosophy, data.philosophyExplanation);
         updated.scores = { ...updated.scores, E6_filosofia: score };
@@ -277,8 +282,11 @@ export default function Evaluate() {
         break;
       }
 
-      case 11: { // Financial (legacy) | Ramp-up (Trebolife)
-        if (state.company === 'trebolife') {
+      case 11: { // Financial (legacy) | Stability + Ramp-up (Trebolife/Traduce, FASE 10)
+        if (state.company === 'trebolife' || state.company === 'traduce') {
+          // FASE 10: el step combina financialSituation + rampUpExpectation.
+          // financialSituation === 'needs_now' descalifica desde el step component.
+          // Acá solo scoreamos el ramp-up.
           const result = scoreRampUp(data.rampUpExpectation);
           updated.scores = { ...updated.scores, Ramp1_velocidad: result.score };
           if (result.disqualify) {

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Link2, FileText, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Upload, Link2, FileText, CheckCircle, AlertCircle, X, Video } from 'lucide-react';
 import { uploadCV, validateFile } from '@/lib/storage';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -10,7 +10,14 @@ interface Props {
   onDisqualify: (reason: string) => void;
 }
 
-type Tab = 'url' | 'file';
+type Tab = 'url' | 'file' | 'loom';
+
+// FASE 10 — validación URL de Loom: debe ser https y contener loom.com.
+function isValidLoomUrl(u: string): boolean {
+  const t = u.trim();
+  if (!t.startsWith('https://')) return false;
+  return /loom\.com/i.test(t);
+}
 
 export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
   const { t } = useLanguage();
@@ -18,6 +25,11 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
 
   // URL tab
   const [url, setUrl] = useState('');
+
+  // Loom tab (FASE 10) — alternativa: candidato graba 60s en Loom y pega URL.
+  const [loomUrl, setLoomUrl] = useState('');
+  const [loomError, setLoomError] = useState('');
+  const [attemptsLoom, setAttemptsLoom] = useState(0);
 
   // File tab
   const [file, setFile] = useState<File | null>(null);
@@ -76,6 +88,7 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
 
   const handleSubmit = () => {
     setFormError('');
+    setLoomError('');
 
     if (tab === 'url') {
       const trimmed = url.trim();
@@ -86,6 +99,25 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
         return;
       }
       onNext({ linkedinUrl: trimmed, cvUrl: trimmed });
+      return;
+    }
+
+    if (tab === 'loom') {
+      const trimmed = loomUrl.trim();
+      if (!trimmed) {
+        if (attemptsLoom >= 1) { onDisqualify('no_envio_cv'); return; }
+        setAttemptsLoom(a => a + 1);
+        setFormError(t('cv_error_url'));
+        return;
+      }
+      if (!isValidLoomUrl(trimmed)) {
+        setLoomError(t('cv_loom_invalid'));
+        return;
+      }
+      // El video Loom funciona como CV alternativo: lo guardamos en
+      // `loomUrl` (campo nuevo) y también en `cvUrl` para compat con el
+      // dashboard que renderiza el "expediente" del candidato.
+      onNext({ loomUrl: trimmed, cvUrl: trimmed, linkedinUrl: '' });
       return;
     }
 
@@ -113,12 +145,13 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-muted/40 rounded-xl mb-6">
         {([
-          { id: 'url' as Tab, labelKey: 'cv_tab_url', icon: Link2 },
+          { id: 'url' as Tab,  labelKey: 'cv_tab_url',  icon: Link2 },
           { id: 'file' as Tab, labelKey: 'cv_tab_file', icon: Upload },
+          { id: 'loom' as Tab, labelKey: 'cv_tab_loom', icon: Video },
         ]).map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => { setTab(id); setFormError(''); }}
+            onClick={() => { setTab(id); setFormError(''); setLoomError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tab === id
                 ? 'bg-background text-foreground shadow-sm gold-shadow'
@@ -266,6 +299,40 @@ export default function CVStep({ sessionId, onNext, onDisqualify }: Props) {
               >
                 {t('cv_upload_btn')}
               </button>
+            )}
+          </motion.div>
+        )}
+
+        {tab === 'loom' && (
+          <motion.div
+            key="loom"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <label className="block text-sm font-medium text-foreground mb-2">
+              {t('cv_loom_label')}
+            </label>
+            <input
+              type="url"
+              value={loomUrl}
+              onChange={(e) => { setLoomUrl(e.target.value); setLoomError(''); setFormError(''); }}
+              placeholder={t('cv_loom_placeholder')}
+              className="w-full bg-input border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            />
+            <p className="mt-2 text-xs text-muted-foreground/70 leading-relaxed">
+              {t('cv_loom_help')}
+            </p>
+            {loomError && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 text-destructive text-sm mt-2"
+              >
+                <AlertCircle size={14} />
+                {loomError}
+              </motion.p>
             )}
           </motion.div>
         )}

@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Test E2E del flow Trebolife completo (11 pasos).
+ * Test E2E del flow Trebolife completo (12 pasos — FASE 10 agregó InboundOpen).
  * Verifica:
  * - Step 0 (Consent) se SALTA con ?company=trebolife
- * - Progress bar dice "Paso 1 de 11"
+ * - Progress bar dice "Paso 1 de 12"
  * - LLM scoring funciona en steps 5/6/7
  * - Llega a /result con status correcto
  */
@@ -24,12 +24,13 @@ test('Flow Trebolife completo desde landing hasta result', async ({ page }) => {
 
   // 3. Verificar: NO ver el step 0 (Consent), debe estar en BasicInfo (step 1)
   await expect(page.getByRole('heading', { name: /información básica/i })).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('body')).toContainText(/paso\s+1\s+de\s+11/i);
+  await expect(page.locator('body')).toContainText(/paso\s+1\s+de\s+12/i);
 
-  // 4. Step 1: BasicInfo (Trebolife: location + email + 40h+)
+  // 4. Step 1: BasicInfo (Trebolife FASE 10: location + email + 40h+ + idioma)
   await page.locator('input[type="text"]').first().fill('Caracas, Venezuela');
   await page.locator('input[type="email"]').fill('pw-trebolife@example.com');
   await page.locator('input[value="more_40"]').click({ force: true });
+  await page.locator('input[value="es_en"]').click({ force: true });
   await page.getByRole('button', { name: /continuar/i }).click();
 
   // 5. Step 2: Experience
@@ -61,10 +62,11 @@ test('Flow Trebolife completo desde landing hasta result', async ({ page }) => {
   await page.getByRole('button', { name: /continuar/i }).click();
   await page.waitForTimeout(10_000); // LLM scoring
 
-  // 9. Step 6: Objection (LLM)
+  // 9. Step 6: Objection (LLM) — FASE 10: producto simulado "Bienestar Familiar / $29"
   await expect(page.getByRole('heading', { name: /objeci/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('body')).toContainText(/Bienestar|Familiar|\$29/i);
   await page.locator('textarea').fill(
-    'Te entiendo María. Obamacare cubre lo grande pero ¿has revisado el deductible para una limpieza dental? Trebolife te da $0 de copago.'
+    'Te entiendo María. Tu seguro principal cubre lo grande, pero ¿has revisado cuánto pagás de deductible en una limpieza dental? El servicio te da $0 de copago en visitas básicas.'
   );
   await page.getByRole('button', { name: /continuar/i }).click();
   await page.waitForTimeout(10_000); // LLM scoring
@@ -77,20 +79,31 @@ test('Flow Trebolife completo desde landing hasta result', async ({ page }) => {
   await page.getByRole('button', { name: /continuar/i }).click();
   await page.waitForTimeout(10_000);
 
-  // 11. Step 10: Stability (Trebolife salta 8 y 9)
+  // 11. Step 8: InboundOpen (FASE 10 — nuevo)
+  await expect(page.getByRole('heading', { name: /apertura.*inbound/i })).toBeVisible({ timeout: 15_000 });
+  await page.locator('textarea').fill(
+    'Hola, ¿hablo con María? Soy Roberto del equipo de Bienestar Familiar — vi que dejaste tus datos pidiendo info. Antes de explicarte, contame brevemente: ¿es para vos sola o para tu familia? ¿qué fue lo que te llamó la atención del servicio?'
+  );
+  await page.getByRole('button', { name: /continuar/i }).click();
+
+  // 12. Step 10: Stability (Trebolife salta 9 — verification)
   await expect(page.getByRole('heading', { name: /trayectoria/i })).toBeVisible({ timeout: 15_000 });
   await page.locator('input[value="1"]').click({ force: true });
   await page.getByRole('button', { name: /continuar/i }).click();
 
-  // 12. Step 11: Ramp-up
-  await expect(page.getByRole('heading', { name: /velocidad de arranque/i })).toBeVisible();
+  // 13. Step 11: Financial (FASE 10 — combina runway + ramp-up en una pantalla)
+  await expect(page.getByRole('heading', { name: /última pregunta|last question/i })).toBeVisible();
+  await page.locator('input[value="stable"]').click({ force: true });
+  // Tras "stable" aparece la sección de ramp-up
+  await expect(page.locator('body')).toContainText(/velocidad de arranque/i);
   await page.locator('input[value="week_1_2"]').click({ force: true });
   await page.getByRole('button', { name: /continuar/i }).click();
 
-  // 13. Step 12: ChurnResistance (heading: "Cierre con FIT vs cierre con presión")
+  // 14. Step 12: ChurnResistance — FASE 10: producto simulado
   await expect(page.getByRole('heading', { name: /fit|cierre/i })).toBeVisible();
+  await expect(page.locator('body')).toContainText(/Bienestar|María|membresía/i);
   await page.locator('textarea').fill(
-    'No le pregunté si ya tiene dentista de cabecera. Si María no usa el seguro porque no sabe a quién acudir, el problema es mío. La próxima vez voy a hacer mini-onboarding con link de búsqueda.'
+    'No le pregunté qué descuento iba a usar primero. Si María no sabe qué necesidad real cubría, no hay forma de que use el servicio. La próxima vez voy a mapear con ella el primer ahorro concreto en los primeros 30 días.'
   );
   await page.getByRole('button', { name: /continuar/i }).click();
 

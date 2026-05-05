@@ -29,6 +29,12 @@ export interface EvaluationState {
   // Trebolife-specific (also reused for future companies)
   rampUpExpectation: string;
   churnPrevention: string;
+  // FASE 10 — apertura inbound (solo trebolife / traduce)
+  inboundOpen: string;
+  // FASE 10 — preferencia de idioma (solo trebolife / traduce)
+  languagePref: 'es' | 'es_en' | '';
+  // FASE 10 — URL Loom de presentación (opcional, candidato elige)
+  loomUrl: string;
   email: string;
   age: number | null;
   maritalStatus: string;
@@ -82,16 +88,13 @@ export const DISQUALIFY_REASONS: Record<string, string> = {
 };
 
 // Pasos que se SALTAN para cada empresa (referenciados por índice en el flujo legacy).
-// Trebolife: skip Consent(0), Philosophy(8), Verification(9).
-// El step 12 NO se skipea — StepRenderer lo reemplaza con ChurnResistance
-// para Trebolife (en lugar del PreReg legacy de edad/marital). Esto era
-// un bug pre-existente: tenía 12 en el set, así que el step se saltaba
-// sin renderear ChurnResistance, y churnPrevention quedaba vacío en DB.
+// Trebolife / Traduce (FASE 10): skip Consent(0), Verification(9).
+// Step 8 ahora se REUSA para InboundOpen (StepRenderer lo intercambia con
+// PhilosophyStep según company). Step 12 NO se skipea — se reemplaza con
+// ChurnResistance.
 export const SKIPPED_STEPS_BY_COMPANY: Record<string, Set<number>> = {
-  trebolife: new Set([0, 8, 9]),
-  // Traduce: same skips as Trebolife — Consent(0), Philosophy(8), Verification(9)
-  // Step 12 (ChurnResistance) is NOT skipped; it shows retention/recurrence question.
-  traduce: new Set([0, 8, 9]),
+  trebolife: new Set([0, 9]),
+  traduce: new Set([0, 9]),
 };
 
 export function getSkippedSteps(company: Company): Set<number> {
@@ -99,11 +102,11 @@ export function getSkippedSteps(company: Company): Set<number> {
   return SKIPPED_STEPS_BY_COMPANY[company] ?? new Set();
 }
 
-// Total de pasos visibles en el progress bar (para Trebolife: 10 visibles + Churn = 11)
-// Traduce mirrors Trebolife: same 11 visible steps, same skips.
+// Total de pasos visibles en el progress bar.
+// Trebolife/Traduce (FASE 10): 12 visibles (incluye nuevo InboundOpen en step 8).
 export function getTotalVisibleSteps(company: Company): number {
-  if (company === 'trebolife') return 11;
-  if (company === 'traduce') return 11;
+  if (company === 'trebolife') return 12;
+  if (company === 'traduce') return 12;
   return 12; // legacy
 }
 
@@ -135,6 +138,9 @@ export function createInitialState(name: string, phone: string, company: Company
     financialSituation: '',
     rampUpExpectation: '',
     churnPrevention: '',
+    inboundOpen: '',
+    languagePref: '',
+    loomUrl: '',
     email: '',
     age: null,
     maritalStatus: '',

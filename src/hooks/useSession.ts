@@ -115,6 +115,10 @@ function buildAnswers(state: EvaluationState): Record<string, unknown> {
     financialSituation:    state.financialSituation,
     rampUpExpectation:     state.rampUpExpectation,
     churnPrevention:       state.churnPrevention,
+    // FASE 10 — campos nuevos guardados en answers JSON (sin migración).
+    inboundOpen:           state.inboundOpen,
+    languagePref:          state.languagePref,
+    loomUrl:               state.loomUrl,
   };
 }
 

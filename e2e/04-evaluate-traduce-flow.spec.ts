@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Test E2E del flow Traduce completo (11 pasos).
+ * Test E2E del flow Traduce completo (12 pasos — FASE 10 agregó InboundOpen).
  * Verifica:
  * - Step 0 (Consent) se SALTA con ?company=traduce
- * - Progress bar dice "Paso 1 de 11"
- * - Preguntas son Traduce-específicas (Experience, Objection, Reactivation)
- * - Step 12 muestra retención/recurrencia (NO Trebolife churn)
+ * - Progress bar dice "Paso 1 de 12"
+ * - Preguntas Traduce-específicas en Experience, Reactivation, Autonomy
+ * - Objection y ChurnResistance reusan el producto simulado "Bienestar Familiar"
  * - Llega a /result con status correcto
  */
 
@@ -25,12 +25,13 @@ test('Flow Traduce completo desde landing hasta result', async ({ page }) => {
 
   // 3. Verificar: NO ver el step 0 (Consent), debe estar en BasicInfo (step 1)
   await expect(page.getByRole('heading', { name: /información básica/i })).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('body')).toContainText(/paso\s+1\s+de\s+11/i);
+  await expect(page.locator('body')).toContainText(/paso\s+1\s+de\s+12/i);
 
-  // 4. Step 1: BasicInfo (Traduce: location + email + 40h+, same as Trebolife)
+  // 4. Step 1: BasicInfo (Traduce FASE 10: location + email + 40h+ + idioma)
   await page.locator('input[type="text"]').first().fill('Miami, Florida, EE.UU.');
   await page.locator('input[type="email"]').fill('pw-traduce@example.com');
   await page.locator('input[value="more_40"]').click({ force: true });
+  await page.locator('input[value="es_en"]').click({ force: true });
   await page.getByRole('button', { name: /continuar/i }).click();
 
   // 5. Step 2: Experience — verifica que el texto es Traduce-específico (USCIS / trámite / bundling)
@@ -65,11 +66,11 @@ test('Flow Traduce completo desde landing hasta result', async ({ page }) => {
   await page.getByRole('button', { name: /continuar/i }).click();
   await page.waitForTimeout(10_000); // LLM scoring
 
-  // 9. Step 6: Objection Traduce — verifica texto específico ("déjame pensarlo")
+  // 9. Step 6: Objection — FASE 10: producto simulado "Bienestar Familiar / $29"
   await expect(page.getByRole('heading', { name: /objeci/i })).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('body')).toContainText(/déjame pensarlo|día 8|8 días/i);
+  await expect(page.locator('body')).toContainText(/Bienestar|Familiar|\$29/i);
   await page.locator('textarea').fill(
-    'Roberto, entiendo que tenés muchas cosas en mente. En 8 días los trámites de USCIS siguen corriendo. Si presentás los documentos esta semana evitás el recargo de $50 por demora. ¿Qué es lo que más te frena?'
+    'Te entiendo Roberto. Tu seguro principal cubre lo grande, pero ¿revisaste cuánto pagás de copago en una visita dental rutinaria? El servicio de $29 te baja eso a $0 — y aplica para toda la familia, no solo para vos.'
   );
   await page.getByRole('button', { name: /continuar/i }).click();
   await page.waitForTimeout(10_000); // LLM scoring
@@ -83,23 +84,31 @@ test('Flow Traduce completo desde landing hasta result', async ({ page }) => {
   await page.getByRole('button', { name: /continuar/i }).click();
   await page.waitForTimeout(10_000);
 
-  // 11. Step 10: Stability (Traduce salta 8 y 9 igual que Trebolife)
+  // 11. Step 8: InboundOpen (FASE 10 — nuevo)
+  await expect(page.getByRole('heading', { name: /apertura.*inbound/i })).toBeVisible({ timeout: 15_000 });
+  await page.locator('textarea').fill(
+    'Hola, ¿hablo con Roberto? Soy del equipo de Bienestar Familiar — vi que dejaste tus datos online interesado en la membresía. Antes de explicarte los descuentos, contame: ¿buscás algo solo para vos o pensás incluir a tu familia? ¿hay algún gasto médico o dental que te haya sorprendido últimamente?'
+  );
+  await page.getByRole('button', { name: /continuar/i }).click();
+
+  // 12. Step 10: Stability (Traduce salta 9 — verification)
   await expect(page.getByRole('heading', { name: /trayectoria/i })).toBeVisible({ timeout: 15_000 });
   await page.locator('input[value="1"]').click({ force: true });
   await page.getByRole('button', { name: /continuar/i }).click();
 
-  // 12. Step 11: Ramp-up Traduce (texto menciona ticket $100, NO Trebolife "5 ventas/día")
-  await expect(page.getByRole('heading', { name: /velocidad de arranque/i })).toBeVisible();
+  // 13. Step 11: Financial (FASE 10 — combina runway + ramp-up)
+  await expect(page.getByRole('heading', { name: /última pregunta|last question/i })).toBeVisible();
+  await page.locator('input[value="stable"]').click({ force: true });
+  // Tras "stable" aparece la sección de ramp-up con el copy de Traduce
   await expect(page.locator('body')).toContainText(/\$100|ticket|comisión/i);
   await page.locator('input[value="week_1_2"]').click({ force: true });
   await page.getByRole('button', { name: /continuar/i }).click();
 
-  // 13. Step 12: Retention/Recurrence Traduce (heading: "Retención y recurrencia")
-  // Verifica que NO dice "Cierre con FIT" (Trebolife) sino retención Traduce
-  await expect(page.getByRole('heading', { name: /retenci/i })).toBeVisible();
-  await expect(page.locator('body')).toContainText(/recurrente|Carlos|naturalizaci/i);
+  // 14. Step 12: ChurnResistance — FASE 10: reusa producto simulado
+  await expect(page.getByRole('heading', { name: /fit|cierre/i })).toBeVisible();
+  await expect(page.locator('body')).toContainText(/Bienestar|María|membresía/i);
   await page.locator('textarea').fill(
-    'Al terminar le pregunto si tiene familia o amigos que también necesiten documentos. Le ofrezco agendar ya el próximo trámite (renovación de green card) con 10% de descuento si lo hace esta semana. Lo agrego a mi lista VIP para recordarles fechas clave de renovación.'
+    'No le pregunté qué descuento iba a usar primero. Si María no tiene claro qué necesidad cubre el servicio en su día a día, no lo va a usar. La próxima vez mapeo con ella el primer ahorro concreto en los primeros 30 días.'
   );
   await page.getByRole('button', { name: /continuar/i }).click();
 

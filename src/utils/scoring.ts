@@ -116,11 +116,19 @@ export function philosophyPenalty(choice: string, explanation: string): number {
 }
 
 export function scoreStability(answer: string): { score: number; riesgoRetencion: boolean } {
+  // FASE 10: subdividimos el antiguo "3_plus" en dos buckets:
+  //   - "3_4"    → mismo trato que el viejo 3+ (5 pts, flag riesgo).
+  //   - "5_plus" → señal mucho más fuerte de inestabilidad: 2 pts y flag.
+  //                 (La penalty extra de -3 se aplica directamente en el
+  //                 score retornado para mantener el shape simple del flag).
+  // Mantenemos compat con strings antiguos en DB ("3_plus") tratándolos como 3_4.
   switch (answer) {
-    case '1': return { score: 10, riesgoRetencion: false };
-    case '2': return { score: 10, riesgoRetencion: false };
-    case '3_plus': return { score: 5, riesgoRetencion: true };
-    default: return { score: 0, riesgoRetencion: false };
+    case '1':       return { score: 10, riesgoRetencion: false };
+    case '2':       return { score: 10, riesgoRetencion: false };
+    case '3_plus':  // legacy DB rows
+    case '3_4':     return { score: 5, riesgoRetencion: true };
+    case '5_plus':  return { score: 2, riesgoRetencion: true }; // 5 - 3 penalty extra
+    default:        return { score: 0, riesgoRetencion: false };
   }
 }
 

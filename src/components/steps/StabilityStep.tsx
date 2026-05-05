@@ -10,10 +10,14 @@ export default function StabilityStep({ name, onNext }: Props) {
   const { t } = useLanguage();
   const [answer, setAnswer] = useState('');
 
+  // FASE 10 — subdividimos "3+" en dos buckets: 3-4 (riesgo) vs 5+ (riesgo
+  // alto + penalty extra). Mantiene "3_4" como reemplazo del antiguo "3_plus"
+  // y agrega "5_plus" como bucket más estricto.
   const options = [
     { value: '1', label: t('stability_1') },
     { value: '2', label: t('stability_2') },
-    { value: '3_plus', label: t('stability_3') },
+    { value: '3_4', label: t('stability_3_4') },
+    { value: '5_plus', label: t('stability_5_plus') },
   ];
 
   return (
