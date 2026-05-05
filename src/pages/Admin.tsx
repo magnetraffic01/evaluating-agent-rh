@@ -551,6 +551,7 @@ export default function Admin() {
   const [recruiterFilter, setRecruiterFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [activeDatePreset, setActiveDatePreset] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [selectedCandidate, setSelectedCandidate] = useState<AdminEvaluation | null>(null);
 
   // Verificar sesión existente al montar (token persistido en localStorage)
@@ -592,12 +593,15 @@ export default function Admin() {
   }, [evaluations]);
 
   // Presets de rango de fechas
-  const applyDatePreset = useCallback((preset: 'today' | 'yesterday' | 'week' | 'month') => {
+  const applyDatePreset = useCallback((preset: 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom') => {
+    setActiveDatePreset(preset);
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-    if (preset === 'today') {
+    if (preset === 'all') {
+      setDateFrom(''); setDateTo('');
+    } else if (preset === 'today') {
       const today = fmt(now);
       setDateFrom(today); setDateTo(today);
     } else if (preset === 'yesterday') {
@@ -611,6 +615,7 @@ export default function Admin() {
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       setDateFrom(fmt(start)); setDateTo(fmt(now));
     }
+    // 'custom' keeps existing values; user edits inputs manually
   }, []);
 
   const filtered = useMemo(() => {
@@ -813,41 +818,46 @@ export default function Admin() {
             )}
           </div>
 
-          {/* Fila 2: filtro por fecha */}
+          {/* Fila 2: filtro por fecha (chips con highlight activo) */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Presets rápidos */}
-            {[
-              { label: t('admin_filter_today'),      preset: 'today'     as const },
-              { label: t('admin_filter_yesterday'),  preset: 'yesterday' as const },
-              { label: t('admin_filter_this_week'),  preset: 'week'      as const },
-              { label: t('admin_filter_this_month'), preset: 'month'     as const },
-            ].map(({ label, preset }) => (
+            <span className="text-xs text-muted-foreground mr-1">{t('admin_filter_date_label')}</span>
+            {([
+              { label: t('admin_filter_date_all'),       preset: 'all'       as const },
+              { label: t('admin_filter_today'),          preset: 'today'     as const },
+              { label: t('admin_filter_yesterday'),      preset: 'yesterday' as const },
+              { label: t('admin_filter_this_week'),      preset: 'week'      as const },
+              { label: t('admin_filter_this_month'),     preset: 'month'     as const },
+              { label: t('admin_filter_date_custom'),    preset: 'custom'    as const },
+            ]).map(({ label, preset }) => (
               <button key={preset} onClick={() => applyDatePreset(preset)}
-                className="text-xs px-3 py-1.5 rounded-lg border border-border bg-input hover:border-primary/50 hover:text-primary text-muted-foreground transition-all">
+                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                  activeDatePreset === preset
+                    ? 'gold-gradient text-primary-foreground border-transparent'
+                    : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted'
+                }`}>
                 {label}
               </button>
             ))}
 
-            <span className="text-muted-foreground/40 text-xs">|</span>
+            {/* Inputs de fecha (solo visibles cuando preset es 'custom') */}
+            {activeDatePreset === 'custom' && (
+              <div className="flex items-center gap-2 ml-2">
+                <Calendar size={13} className="text-muted-foreground" />
+                <input type="date" value={dateFrom}
+                  onChange={e => { setDateFrom(e.target.value); setActiveDatePreset('custom'); }}
+                  className="bg-input border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+                <span className="text-muted-foreground/40 text-xs">→</span>
+                <input type="date" value={dateTo}
+                  onChange={e => { setDateTo(e.target.value); setActiveDatePreset('custom'); }}
+                  className="bg-input border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+              </div>
+            )}
 
-            {/* Desde */}
-            <div className="relative flex items-center gap-1.5">
-              <Calendar size={13} className="text-muted-foreground" />
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                className="bg-input border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-              />
-            </div>
-
-            <span className="text-muted-foreground/40 text-xs">→</span>
-
-            {/* Hasta */}
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="bg-input border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-
-            {/* Limpiar fechas */}
-            {(dateFrom || dateTo) && (
-              <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+            {/* Limpiar fechas (solo si hay rango activo) */}
+            {(dateFrom || dateTo) && activeDatePreset !== 'all' && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setActiveDatePreset('all'); }}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/10">
                 <X size={12} />
                 {t('admin_btn_clear_dates')}

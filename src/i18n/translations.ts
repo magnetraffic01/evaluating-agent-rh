@@ -505,6 +505,9 @@ const translations = {
     admin_filter_yesterday: 'Ayer',
     admin_filter_this_week: 'Esta semana',
     admin_filter_this_month: 'Este mes',
+    admin_filter_date_label: 'Fecha:',
+    admin_filter_date_all: 'Todo',
+    admin_filter_date_custom: 'Personalizado',
     admin_btn_clear_dates: 'Limpiar',
 
     // Stats cards
@@ -1235,6 +1238,9 @@ const translations = {
     admin_filter_yesterday: 'Yesterday',
     admin_filter_this_week: 'This week',
     admin_filter_this_month: 'This month',
+    admin_filter_date_label: 'Date:',
+    admin_filter_date_all: 'All',
+    admin_filter_date_custom: 'Custom',
     admin_btn_clear_dates: 'Clear',
 
     // Stats cards
