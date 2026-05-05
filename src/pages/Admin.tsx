@@ -162,13 +162,28 @@ function CVLinks({ candidate }: { candidate: AdminEvaluation }) {
     if (!raw) { setCvUrl(null); return; }
     // El backend devuelve URLs absolutas o paths tipo `/files/cv-xxx.pdf`.
     // Si llega un path relativo, lo prefijamos con la base de la API.
-    if (/^https?:\/\//i.test(raw)) {
-      setCvUrl(raw);
-    } else if (raw.startsWith('/')) {
-      setCvUrl(`${API_BASE_URL}${raw}`);
+    //
+    // Bug fix 2026-05-05: hr-api.magnetraffic.com NUNCA se configuró en DNS,
+    // pero quedó como UPLOAD_PUBLIC_URL en producción. Las URLs absolutas que
+    // apuntan a ese subdominio se reescriben para que sirvan desde el dominio
+    // real del backend (API_BASE_URL).
+    let normalized = raw;
+    if (/https?:\/\/hr-api\.magnetraffic\.com\b/i.test(normalized)) {
+      // Extrae el path (/files/...) y lo arma con API_BASE_URL.
+      try {
+        const u = new URL(normalized);
+        normalized = `${API_BASE_URL}${u.pathname}${u.search}`;
+      } catch {
+        normalized = normalized.replace(/^https?:\/\/hr-api\.magnetraffic\.com/i, API_BASE_URL);
+      }
+    }
+    if (/^https?:\/\//i.test(normalized)) {
+      setCvUrl(normalized);
+    } else if (normalized.startsWith('/')) {
+      setCvUrl(`${API_BASE_URL}${normalized}`);
     } else {
       // Posible filename suelto — lo servimos vía /files/:filename
-      setCvUrl(`${API_BASE_URL}/files/${raw}`);
+      setCvUrl(`${API_BASE_URL}/files/${normalized}`);
     }
   }, [candidate.cv_url]);
 

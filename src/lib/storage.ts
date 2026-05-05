@@ -37,6 +37,17 @@ export function validateFile(file: File): string | null {
  */
 function toAbsoluteUrl(url: string): string {
   if (!url) return url;
+  // Bug fix 2026-05-05: hr-api.magnetraffic.com nunca se configuró en DNS.
+  // Si el backend devuelve esa URL absoluta (porque UPLOAD_PUBLIC_URL la sigue
+  // teniendo en .env), reescribimos para servir desde el dominio real del API.
+  if (/https?:\/\/hr-api\.magnetraffic\.com\b/i.test(url)) {
+    try {
+      const u = new URL(url);
+      return `${API_BASE_URL.replace(/\/+$/, '')}${u.pathname}${u.search}`;
+    } catch {
+      return url.replace(/^https?:\/\/hr-api\.magnetraffic\.com/i, API_BASE_URL.replace(/\/+$/, ''));
+    }
+  }
   if (/^https?:\/\//i.test(url)) return url;
   const base = API_BASE_URL.replace(/\/+$/, '');
   return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
