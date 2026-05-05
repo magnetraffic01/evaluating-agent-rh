@@ -178,6 +178,9 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
+  const [customFrom, setCustomFrom] = useState<string>(''); // YYYY-MM-DD
+  const [customTo, setCustomTo] = useState<string>('');
   const [selectedEv, setSelectedEv] = useState<PortalEvaluation | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -249,15 +252,51 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Date filter window
+  const dateWindow = useMemo(() => {
+    const now = new Date();
+    const startOfDay = (d: Date) => {
+      const x = new Date(d); x.setHours(0, 0, 0, 0); return x;
+    };
+    const endOfDay = (d: Date) => {
+      const x = new Date(d); x.setHours(23, 59, 59, 999); return x;
+    };
+    if (dateFilter === 'all') return null;
+    if (dateFilter === 'today') return { from: startOfDay(now), to: endOfDay(now) };
+    if (dateFilter === 'yesterday') {
+      const y = new Date(now); y.setDate(y.getDate() - 1);
+      return { from: startOfDay(y), to: endOfDay(y) };
+    }
+    if (dateFilter === 'week') {
+      const start = new Date(now); start.setDate(start.getDate() - 6); // últimos 7 días
+      return { from: startOfDay(start), to: endOfDay(now) };
+    }
+    if (dateFilter === 'month') {
+      const start = new Date(now); start.setDate(start.getDate() - 29); // últimos 30 días
+      return { from: startOfDay(start), to: endOfDay(now) };
+    }
+    if (dateFilter === 'custom' && customFrom && customTo) {
+      return {
+        from: startOfDay(new Date(`${customFrom}T00:00:00`)),
+        to: endOfDay(new Date(`${customTo}T00:00:00`)),
+      };
+    }
+    return null;
+  }, [dateFilter, customFrom, customTo]);
+
   const filtered = useMemo(() => {
     return evaluations.filter(e => {
       const matchesSearch = !search ||
         e.name.toLowerCase().includes(search.toLowerCase()) ||
         e.phone.includes(search);
       const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesDate = !dateWindow || (() => {
+        const t = new Date(e.created_at).getTime();
+        return t >= dateWindow.from.getTime() && t <= dateWindow.to.getTime();
+      })();
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [evaluations, search, statusFilter]);
+  }, [evaluations, search, statusFilter, dateWindow]);
 
   const stats = useMemo(() => ({
     total:       evaluations.length,
@@ -309,33 +348,75 @@ function PortalDashboard({ session, onLogout }: { session: PortalSession; onLogo
         <RecruiterMetrics evaluations={evaluations} myLabel={recruiterLabel} />
 
         {/* Filtros */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder={t('portal_search_placeholder')}
-              className="w-full bg-input border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
+        <div className="space-y-3">
+          {/* Fila 1: búsqueda + estado */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text" value={search} onChange={e => setSearch(e.target.value)}
+                placeholder={t('portal_search_placeholder')}
+                className="w-full bg-input border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              />
+            </div>
+            <div className="relative">
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
+                <option value="all">{t('portal_filter_all')}</option>
+                <option value="elite">{t('portal_filter_elite')}</option>
+                <option value="calificado">{t('portal_filter_calificado')}</option>
+                <option value="potencial">{t('portal_filter_potencial')}</option>
+                <option value="descartado">{t('portal_filter_descartado')}</option>
+                <option value="en_progreso">{t('portal_filter_en_progreso')}</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+            {search && (
+              <button onClick={() => setSearch('')}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-3 py-2.5 rounded-xl hover:bg-destructive/10 border border-border">
+                <X size={12} />{t('portal_btn_clear')}
+              </button>
+            )}
           </div>
-          <div className="relative">
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-              className="appearance-none bg-input border border-border rounded-xl pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
-              <option value="all">{t('portal_filter_all')}</option>
-              <option value="elite">{t('portal_filter_elite')}</option>
-              <option value="calificado">{t('portal_filter_calificado')}</option>
-              <option value="potencial">{t('portal_filter_potencial')}</option>
-              <option value="descartado">{t('portal_filter_descartado')}</option>
-              <option value="en_progreso">{t('portal_filter_en_progreso')}</option>
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+
+          {/* Fila 2: filtros de fecha (chips) */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground mr-1">{t('portal_filter_date_label')}</span>
+            {([
+              ['all',       t('portal_filter_date_all')],
+              ['today',     t('portal_filter_date_today')],
+              ['yesterday', t('portal_filter_date_yesterday')],
+              ['week',      t('portal_filter_date_week')],
+              ['month',     t('portal_filter_date_month')],
+              ['custom',    t('portal_filter_date_custom')],
+            ] as ['all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom', string][]).map(([key, label]) => (
+              <button key={key} onClick={() => setDateFilter(key)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                  dateFilter === key
+                    ? 'gold-gradient text-primary-foreground border-transparent'
+                    : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted'
+                }`}>
+                {label}
+              </button>
+            ))}
+            {dateFilter === 'custom' && (
+              <div className="flex items-center gap-2 ml-2">
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={e => setCustomFrom(e.target.value)}
+                  className="bg-input border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <span className="text-xs text-muted-foreground">→</span>
+                <input
+                  type="date"
+                  value={customTo}
+                  onChange={e => setCustomTo(e.target.value)}
+                  className="bg-input border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+            )}
           </div>
-          {search && (
-            <button onClick={() => setSearch('')}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-3 py-2.5 rounded-xl hover:bg-destructive/10 border border-border">
-              <X size={12} />{t('portal_btn_clear')}
-            </button>
-          )}
         </div>
 
         {/* Totalizador */}

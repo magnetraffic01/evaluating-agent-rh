@@ -395,6 +395,13 @@ const translations = {
     portal_filter_descartado: 'Descartado',
     portal_filter_en_progreso: 'En progreso',
     portal_btn_clear: 'Limpiar',
+    portal_filter_date_label: 'Fecha:',
+    portal_filter_date_all: 'Todo',
+    portal_filter_date_today: 'Hoy',
+    portal_filter_date_yesterday: 'Ayer',
+    portal_filter_date_week: 'Últimos 7 días',
+    portal_filter_date_month: 'Últimos 30 días',
+    portal_filter_date_custom: 'Personalizado',
 
     // Totalizador
     portal_candidate_singular: 'candidato',
@@ -1118,6 +1125,13 @@ const translations = {
     portal_filter_descartado: 'Discarded',
     portal_filter_en_progreso: 'In progress',
     portal_btn_clear: 'Clear',
+    portal_filter_date_label: 'Date:',
+    portal_filter_date_all: 'All',
+    portal_filter_date_today: 'Today',
+    portal_filter_date_yesterday: 'Yesterday',
+    portal_filter_date_week: 'Last 7 days',
+    portal_filter_date_month: 'Last 30 days',
+    portal_filter_date_custom: 'Custom',
 
     // Totalizador
     portal_candidate_singular: 'candidate',
