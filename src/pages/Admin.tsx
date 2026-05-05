@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare, TrendingUp } from 'lucide-react';
+import { Search, X, RefreshCw, ChevronDown, ExternalLink, AlertCircle, Printer, Calendar, User, FileText, BarChart2, MessageSquare, TrendingUp, Trophy, Video, Download } from 'lucide-react';
 import MagnetLogo from '@/components/MagnetLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAdmin, AdminEvaluation, updateInterviewData, useBriefing, useUpdateHiredStatus, fetchEvaluationDetail } from '@/hooks/useAdmin';
@@ -10,6 +10,7 @@ import { HiredStatusButtons } from '@/components/admin/HiredStatusButtons';
 import { AnalyticsPanel } from '@/components/admin/AnalyticsPanel';
 import { CompaniesPanel } from '@/components/admin/CompaniesPanel';
 import { RecruitersWithCompanies } from '@/components/admin/RecruitersWithCompanies';
+import { PerformancePanel } from '@/components/admin/PerformancePanel';
 import { toast } from 'sonner';
 import {
   auth as apiAuth,
@@ -264,6 +265,60 @@ function normalizeRecruiter(value: string | null | undefined): string | null {
     'blcv7ez4gifnduyк1vry':  'Reclutador 2',
   };
   return map[value.toLowerCase()] ?? value;
+}
+
+// ─── CSV export helpers ──────────────────────────────────────────────────────
+
+function csvEscape(v: unknown): string {
+  if (v == null) return '';
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function exportCandidatesCsv(rows: AdminEvaluation[]): void {
+  const headers = [
+    'id', 'created_at', 'name', 'phone', 'email', 'location',
+    'score', 'status', 'assigned_to', 'company',
+    'interview_status', 'interview_date', 'hired_status',
+  ];
+  const lines: string[] = [headers.join(',')];
+  for (const r of rows) {
+    const rec = r as AdminEvaluation & {
+      company?: string | null;
+      hired_status?: string | null;
+    };
+    lines.push([
+      csvEscape(r.id),
+      csvEscape(r.created_at),
+      csvEscape(r.name),
+      csvEscape(r.phone),
+      csvEscape(r.email),
+      csvEscape(r.location),
+      csvEscape(r.score_total),
+      csvEscape(r.status),
+      csvEscape(r.assigned_to),
+      csvEscape(rec.company ?? ''),
+      csvEscape(r.interview_status),
+      csvEscape(r.interview_date),
+      csvEscape(rec.hired_status ?? ''),
+    ].join(','));
+  }
+  const csv = lines.join('\r\n');
+  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const today = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const filename = `candidatos_${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}.csv`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ─── Modal de detalle ─────────────────────────────────────────────────────────
@@ -523,6 +578,23 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
                 </div>
               )}
 
+              {/* Loom 60s video (FASE 10) */}
+              {(() => {
+                const loomUrl = (candidate.answers as Record<string, unknown> | null)?.loomUrl;
+                if (typeof loomUrl !== 'string' || !loomUrl) return null;
+                return (
+                  <a
+                    href={loomUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm hover:bg-primary/20 transition-all"
+                  >
+                    <Video size={14} />
+                    {t('admin_modal_loom_btn')}
+                  </a>
+                );
+              })()}
+
               {/* Briefing Card */}
               <BriefingCard
                 summary={briefing?.summary ?? null}
@@ -645,9 +717,45 @@ function DetailModal({ candidate: candidateProp, onClose, onUpdate }: {
           {activeTab === 'qa' && (
             <div className="space-y-3 print:block">
               <h4 className="text-foreground font-semibold text-sm uppercase tracking-wider print:text-black">{t('admin_modal_qa_title')}</h4>
+
+              {/* Inbound Open (FASE 10) */}
+              {(() => {
+                const inboundOpen = (candidate.answers as Record<string, unknown> | null)?.inboundOpen;
+                if (typeof inboundOpen !== 'string' || !inboundOpen) return null;
+                return (
+                  <section className="bg-muted/10 rounded-xl p-4 print:border print:border-black print:rounded-none print:mb-2">
+                    <h5 className="text-xs text-muted-foreground mb-1 print:text-black uppercase tracking-wider">
+                      {t('admin_qa_inbound_title')}
+                    </h5>
+                    <p className="text-foreground text-sm whitespace-pre-line leading-relaxed print:text-black">
+                      {inboundOpen}
+                    </p>
+                  </section>
+                );
+              })()}
+
+              {/* Idioma preferido (FASE 10) */}
+              {(() => {
+                const languagePref = (candidate.answers as Record<string, unknown> | null)?.languagePref;
+                if (typeof languagePref !== 'string' || !languagePref) return null;
+                const labelKey = languagePref === 'es_en' ? 'admin_qa_lang_bilingual' : 'admin_qa_lang_es_only';
+                return (
+                  <section className="bg-muted/10 rounded-xl p-4 print:border print:border-black print:rounded-none print:mb-2">
+                    <h5 className="text-xs text-muted-foreground mb-2 print:text-black uppercase tracking-wider">
+                      {t('admin_qa_language_title')}
+                    </h5>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border bg-primary/10 text-primary border-primary/30">
+                      {t(labelKey)}
+                    </span>
+                  </section>
+                );
+              })()}
+
               {hasAnswers ? (
                 Object.entries(candidate.answers!).map(([key, value]) => {
                   if (!value) return null;
+                  // Skip the FASE 10 fields rendered above and the loomUrl (rendered in candidato tab)
+                  if (key === 'inboundOpen' || key === 'languagePref' || key === 'loomUrl') return null;
                   return (
                     <div key={key} className="bg-muted/10 rounded-xl p-4 print:border print:border-black print:rounded-none print:mb-2">
                       <p className="text-xs text-muted-foreground mb-1 print:text-black">{ANSWER_LABELS[key] || key}</p>
@@ -891,6 +999,23 @@ function RecruiterPanel() {
     }
   };
 
+  const updateMonthlyGoal = async (r: Recruiter, raw: string) => {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0 || n > 1000) return;
+    if (n === (r.monthly_goal ?? 6)) return;
+    // Optimistic update
+    setRecruiters(prev => prev.map(x => x.id === r.id ? { ...x, monthly_goal: n } : x));
+    try {
+      await apiRecruiters.update(r.id, { monthly_goal: n });
+      toast.success(t('admin_recruiter_goal_updated', { name: r.name }));
+    } catch (e) {
+      // Revert on error
+      setRecruiters(prev => prev.map(x => x.id === r.id ? { ...x, monthly_goal: r.monthly_goal } : x));
+      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
+      toast.error(msg);
+    }
+  };
+
   const handleAdd = async () => {
     setAddError(null);
     if (!newRecruiter.name || !newRecruiter.label || !newRecruiter.calendar_url) {
@@ -951,6 +1076,7 @@ function RecruiterPanel() {
                   t('admin_recruiter_col_weight'),
                   t('admin_recruiter_col_total'),
                   t('admin_recruiter_col_real_pct'),
+                  t('admin_recruiter_goal_label'),
                   t('admin_recruiter_col_status'),
                   t('admin_recruiter_col_distribution'),
                   t('admin_recruiter_col_actions'),
@@ -990,6 +1116,19 @@ function RecruiterPanel() {
                     <td className="px-4 py-3 text-muted-foreground">{r.total_assigned}</td>
                     <td className="px-4 py-3">
                       <span className={`font-semibold ${realPct > (r.weight || 0) ? 'text-warning' : 'text-success'}`}>{realPct}%</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        min={0}
+                        max={1000}
+                        defaultValue={r.monthly_goal ?? 6}
+                        onBlur={(e) => updateMonthlyGoal(r, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                        }}
+                        className="w-16 bg-input border border-border rounded-lg px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => toggleActive(r)}
@@ -1043,7 +1182,7 @@ function RecruiterPanel() {
               })}
               {recruiters.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-muted-foreground text-sm">
+                  <td colSpan={10} className="px-4 py-10 text-center text-muted-foreground text-sm">
                     {t('admin_recruiter_empty')}
                   </td>
                 </tr>
@@ -1196,7 +1335,8 @@ export default function Admin() {
   const { t } = useLanguage();
   const [session, setSession] = useState<AdminSession | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores' | 'empresas' | 'analytics'>('candidatos');
+  const [activeTab, setActiveTab] = useState<'candidatos' | 'reclutadores' | 'empresas' | 'performance' | 'analytics'>('candidatos');
+  const analyticsRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [recruiterFilter, setRecruiterFilter] = useState<string>('all');
@@ -1346,9 +1486,10 @@ export default function Admin() {
             ['candidatos',  t('admin_tab_candidates'), null],
             ['reclutadores',t('admin_tab_recruiters'), null],
             ['empresas',    t('admin_tab_companies'),  null],
+            ['performance', t('admin_tab_performance'),<Trophy size={14} key="p" />],
             ['analytics',   t('admin_tab_analytics'),  <TrendingUp size={14} key="a" />],
           ] as [string, string, React.ReactNode][]).map(([tab, label, icon]) => (
-            <button key={tab} onClick={() => setActiveTab(tab as 'candidatos' | 'reclutadores' | 'empresas' | 'analytics')}
+            <button key={tab} onClick={() => setActiveTab(tab as 'candidatos' | 'reclutadores' | 'empresas' | 'performance' | 'analytics')}
               className={`flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium capitalize transition-all border-b-2 -mb-px ${
                 activeTab === tab
                   ? 'border-primary text-primary'
@@ -1375,8 +1516,23 @@ export default function Admin() {
           <CompaniesPanel />
         )}
 
+        {activeTab === 'performance' && (
+          <PerformancePanel
+            onJumpToAbandoned={() => {
+              setActiveTab('analytics');
+              // Scroll after the analytics panel mounts
+              setTimeout(() => {
+                const el = document.getElementById('admin-abandoned-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 200);
+            }}
+          />
+        )}
+
         {activeTab === 'analytics' && (
-          <AnalyticsPanel />
+          <div ref={analyticsRef}>
+            <AnalyticsPanel />
+          </div>
         )}
 
         {activeTab === 'candidatos' && (<>
@@ -1491,9 +1647,9 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Totalizador */}
+        {/* Totalizador + Export CSV */}
         {!loading && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm flex-wrap">
             <span className="text-foreground font-semibold">{filtered.length}</span>
             <span className="text-muted-foreground">
               {filtered.length !== evaluations.length ? `${t('admin_count_of', { total: evaluations.length })} ` : ''}
@@ -1504,6 +1660,14 @@ export default function Admin() {
                 {t('admin_filter_active')}
               </span>
             )}
+            <button
+              onClick={() => exportCandidatesCsv(filtered)}
+              disabled={filtered.length === 0}
+              className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-input hover:border-primary/50 hover:text-primary text-muted-foreground transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download size={13} />
+              {t('admin_export_csv')}
+            </button>
           </div>
         )}
 

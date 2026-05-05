@@ -619,6 +619,75 @@ const translations = {
     // Company assignment section
     admin_company_assignment_title: 'Asignación por Empresa',
 
+    // ─── Performance tab (admin) ────────────────────────────────────────────
+    admin_tab_performance: 'Rendimiento',
+    admin_perf_title: 'Rendimiento del equipo',
+    admin_perf_podium_title: 'Top 3 del mes',
+    admin_perf_podium_empty: 'Aún no hay hires este mes — el podio se llenará cuando se registren los primeros cierres.',
+    admin_perf_x_of_y: '{count} de {goal}',
+    admin_perf_quick_actions: 'Acciones rápidas',
+    admin_perf_btn_view_abandoned: 'Ver candidatos abandonados ({count})',
+    admin_perf_jump_abandoned_toast: 'Saltando a la sección de abandonados…',
+    admin_perf_comparison_title: 'Comparativa por reclutadora',
+    admin_perf_col_recruiter: 'Reclutadora',
+    admin_perf_col_companies: 'Empresas',
+    admin_perf_col_hires_mes: 'Hires mes',
+    admin_perf_col_goal: 'Goal',
+    admin_perf_col_hire_rate: 'Hire-rate',
+    admin_perf_col_assign_to_schedule: 'Avg asig→agend',
+    admin_perf_col_schedule_to_hire: 'Avg agend→hired',
+    admin_perf_col_lead_quality: 'Lead quality',
+    admin_perf_col_streak: 'Streak',
+    admin_perf_sin_data: 'No hay datos de reclutadores activos.',
+    admin_perf_recruiters_count: '{count} reclutadoras activas',
+
+    // ─── Recruiter goal (inline edit) ───────────────────────────────────────
+    admin_recruiter_goal_label: 'Goal mensual',
+    admin_recruiter_goal_updated: 'Goal actualizado para {name}',
+
+    // ─── Modal — Q&A FASE 10 + Loom ─────────────────────────────────────────
+    admin_qa_inbound_title: 'Apertura de llamada inbound',
+    admin_qa_language_title: 'Idioma de cierre',
+    admin_qa_lang_es_only: 'Solo español',
+    admin_qa_lang_bilingual: 'Bilingüe (ES/EN)',
+    admin_modal_loom_btn: 'Ver video Loom (60s)',
+
+    // ─── Analytics panel ────────────────────────────────────────────────────
+    admin_analytics_title: 'Analytics del Funnel',
+    admin_analytics_company_all: 'Todas',
+    admin_analytics_range_today: 'Hoy',
+    admin_analytics_range_7d: '7d',
+    admin_analytics_range_30d: '30d',
+    admin_analytics_range_all: 'Todo',
+    admin_analytics_temporal_tooltip: 'Rango temporal — se aplica al funnel global y a abandonados',
+    admin_analytics_temporal_note: 'Filtros temporales próximamente para el funnel global. Por ahora la sección "abandonados" sí los aplica en vivo.',
+    admin_analytics_error: 'No se pudo cargar analytics: {error}',
+    admin_analytics_loading: 'Cargando analytics...',
+    admin_analytics_no_data: 'Sin datos de analytics disponibles',
+    admin_analytics_kpi_total: 'Total evaluaciones',
+    admin_analytics_kpi_completed: 'Completadas',
+    admin_analytics_kpi_conversion: 'Conversión (elite+cal.)',
+    admin_analytics_kpi_in_progress: 'En progreso',
+    admin_analytics_of_total: 'del total',
+    admin_analytics_of_completed: 'de completadas',
+    admin_analytics_funnel_title: 'Abandono por Step',
+    admin_analytics_by_status: 'Por Resultado',
+    admin_analytics_by_device: 'Por Dispositivo',
+    admin_analytics_avg_step_title: 'Tiempo promedio por step (segundos)',
+
+    // ─── Abandoned section ──────────────────────────────────────────────────
+    admin_abandoned_title: 'Candidatos abandonados (≥ {hours}h)',
+    admin_abandoned_hours: 'Horas:',
+    admin_abandoned_reactivate: 'Reactivar',
+    admin_abandoned_empty: 'Nadie abandonado en esa ventana ✓',
+    admin_abandoned_col_name: 'Nombre',
+    admin_abandoned_col_phone: 'Teléfono',
+    admin_abandoned_col_step: 'Step',
+    admin_abandoned_col_inactive: 'Inactivo hace',
+
+    // ─── Export ─────────────────────────────────────────────────────────────
+    admin_export_csv: 'Exportar CSV',
+
     // ─── Traduce specific ───────────────────────────────────────────────────
     basic_description_traduce:
       'Hola {name}. Para closer de Traduce necesitamos confirmar 3 cosas:\n\n• Desde dónde nos escribes\n• Tu correo (para enviarte la información del proceso)\n• Que tengas 40+ horas semanales reales (los clientes migrantes requieren mucho seguimiento)',
@@ -1272,6 +1341,75 @@ const translations = {
 
     // Company assignment section
     admin_company_assignment_title: 'Assignment by Company',
+
+    // ─── Performance tab (admin) ────────────────────────────────────────────
+    admin_tab_performance: 'Performance',
+    admin_perf_title: 'Team Performance',
+    admin_perf_podium_title: 'Top 3 of the month',
+    admin_perf_podium_empty: 'No hires yet this month — the podium will fill as the first closes are recorded.',
+    admin_perf_x_of_y: '{count} of {goal}',
+    admin_perf_quick_actions: 'Quick actions',
+    admin_perf_btn_view_abandoned: 'View abandoned candidates ({count})',
+    admin_perf_jump_abandoned_toast: 'Jumping to the abandoned section…',
+    admin_perf_comparison_title: 'Recruiter comparison',
+    admin_perf_col_recruiter: 'Recruiter',
+    admin_perf_col_companies: 'Companies',
+    admin_perf_col_hires_mes: 'Hires/mo',
+    admin_perf_col_goal: 'Goal',
+    admin_perf_col_hire_rate: 'Hire-rate',
+    admin_perf_col_assign_to_schedule: 'Avg assign→sched',
+    admin_perf_col_schedule_to_hire: 'Avg sched→hired',
+    admin_perf_col_lead_quality: 'Lead quality',
+    admin_perf_col_streak: 'Streak',
+    admin_perf_sin_data: 'No data for active recruiters.',
+    admin_perf_recruiters_count: '{count} active recruiters',
+
+    // ─── Recruiter goal (inline edit) ───────────────────────────────────────
+    admin_recruiter_goal_label: 'Monthly goal',
+    admin_recruiter_goal_updated: 'Goal updated for {name}',
+
+    // ─── Modal — Q&A FASE 10 + Loom ─────────────────────────────────────────
+    admin_qa_inbound_title: 'Inbound call opening',
+    admin_qa_language_title: 'Closing language',
+    admin_qa_lang_es_only: 'Spanish only',
+    admin_qa_lang_bilingual: 'Bilingual (ES/EN)',
+    admin_modal_loom_btn: 'Watch Loom video (60s)',
+
+    // ─── Analytics panel ────────────────────────────────────────────────────
+    admin_analytics_title: 'Funnel Analytics',
+    admin_analytics_company_all: 'All',
+    admin_analytics_range_today: 'Today',
+    admin_analytics_range_7d: '7d',
+    admin_analytics_range_30d: '30d',
+    admin_analytics_range_all: 'All',
+    admin_analytics_temporal_tooltip: 'Time range — applies to global funnel and abandoned',
+    admin_analytics_temporal_note: 'Time filters coming soon for the global funnel. For now the "abandoned" section applies them live.',
+    admin_analytics_error: 'Could not load analytics: {error}',
+    admin_analytics_loading: 'Loading analytics...',
+    admin_analytics_no_data: 'No analytics data available',
+    admin_analytics_kpi_total: 'Total evaluations',
+    admin_analytics_kpi_completed: 'Completed',
+    admin_analytics_kpi_conversion: 'Conversion (elite+qual.)',
+    admin_analytics_kpi_in_progress: 'In progress',
+    admin_analytics_of_total: 'of total',
+    admin_analytics_of_completed: 'of completed',
+    admin_analytics_funnel_title: 'Drop-off by Step',
+    admin_analytics_by_status: 'By Result',
+    admin_analytics_by_device: 'By Device',
+    admin_analytics_avg_step_title: 'Average time per step (seconds)',
+
+    // ─── Abandoned section ──────────────────────────────────────────────────
+    admin_abandoned_title: 'Abandoned candidates (≥ {hours}h)',
+    admin_abandoned_hours: 'Hours:',
+    admin_abandoned_reactivate: 'Reactivate',
+    admin_abandoned_empty: 'Nobody abandoned in this window ✓',
+    admin_abandoned_col_name: 'Name',
+    admin_abandoned_col_phone: 'Phone',
+    admin_abandoned_col_step: 'Step',
+    admin_abandoned_col_inactive: 'Inactive for',
+
+    // ─── Export ─────────────────────────────────────────────────────────────
+    admin_export_csv: 'Export CSV',
 
     // ─── Traduce specific ───────────────────────────────────────────────────
     basic_description_traduce:

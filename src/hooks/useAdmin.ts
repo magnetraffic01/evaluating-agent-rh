@@ -303,8 +303,9 @@ export function useUpdateRecruiterCompanies() {
 
 /**
  * Hook to load funnel analytics.
+ * `hours` is forwarded to the backend; if unsupported it is silently ignored.
  */
-export function useFunnel(company?: string) {
+export function useFunnel(company?: string, hours?: number) {
   const [data, setData] = useState<FunnelAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -313,7 +314,7 @@ export function useFunnel(company?: string) {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiAnalytics.funnel(company);
+      const res = await apiAnalytics.funnel(company, hours);
       setData(res);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : String(e));
@@ -321,7 +322,7 @@ export function useFunnel(company?: string) {
     } finally {
       setLoading(false);
     }
-  }, [company]);
+  }, [company, hours]);
 
   useEffect(() => {
     fetch();

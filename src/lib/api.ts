@@ -139,6 +139,7 @@ export interface Recruiter {
   total_assigned: number;
   notes?: string | null;
   created_at?: string;
+  monthly_goal?: number;
 }
 
 export interface RecruiterAssignment {
@@ -161,6 +162,7 @@ export interface RecruiterUpdateBody {
   weight?: number;
   active?: boolean;
   notes?: string | null;
+  monthly_goal?: number;
 }
 
 export interface AdminUser {
@@ -531,8 +533,11 @@ export const hiredStatus = {
 };
 
 export const analytics = {
-  funnel(company?: string): Promise<FunnelAnalytics> {
-    const q = company ? `?company=${encodeURIComponent(company)}` : '';
+  funnel(company?: string, hours?: number): Promise<FunnelAnalytics> {
+    const params: string[] = [];
+    if (company) params.push(`company=${encodeURIComponent(company)}`);
+    if (typeof hours === 'number') params.push(`hours=${hours}`);
+    const q = params.length ? `?${params.join('&')}` : '';
     return api.get<FunnelAnalytics>(`/api/hr/analytics/funnel${q}`);
   },
   abandoned(hours = 24): Promise<AbandonedResponse> {
