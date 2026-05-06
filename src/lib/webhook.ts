@@ -2,10 +2,12 @@ import { EvaluationState } from '@/types/evaluation';
 
 const WEBHOOK_URL = import.meta.env.VITE_GHL_WEBHOOK_URL;
 
+// Fix 2026-05-06: el URL `presentacion-closer` daba 404 en GHL.
+// Default ahora apunta al calendar `entrevista-para-closer` que sí existe.
 const CALENDAR_ELITE = import.meta.env.VITE_CALENDAR_ELITE
-  || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
+  || 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
 const CALENDAR_STD   = import.meta.env.VITE_CALENDAR_STD
-  || 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
+  || 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
 
 export interface WebhookPayload {
   name:          string;

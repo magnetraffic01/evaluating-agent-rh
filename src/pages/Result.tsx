@@ -5,7 +5,10 @@ import MagnetLogo from '@/components/MagnetLogo';
 import { EvaluationState } from '@/types/evaluation';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const CALENDAR_FALLBACK = 'https://link.magnetraffic.com/widget/bookings/presentacion-closer';
+// Fallback usado solo si no hay reclutadora asignada (caso raro).
+// El URL anterior (`presentacion-closer`) devolvía 404 — reemplazado por
+// el calendar genérico de entrevistas que sí está activo en GHL.
+const CALENDAR_FALLBACK = 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
 
 // ─── Particle burst para Elite ────────────────────────────────────────────────
 
