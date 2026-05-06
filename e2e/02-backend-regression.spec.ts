@@ -135,11 +135,26 @@ test('Bug #5: /companies/decide rate-limited a 30 req/min', async () => {
 test('Recruiters assign filtra por company', async () => {
   const req = await pwRequest.newContext();
 
-  for (const company of ['trebolife', 'traduce']) {
-    const r = await req.post(`${API}/api/hr/recruiters/assign`, { data: { company } });
-    expect(r.ok()).toBeTruthy();
-    const body = await r.json();
+  // Trebolife está activo → debe responder 200 con label + calendar_url.
+  const trebo = await req.post(`${API}/api/hr/recruiters/assign`, { data: { company: 'trebolife' } });
+  expect(trebo.ok()).toBeTruthy();
+  const tBody = await trebo.json();
+  expect(tBody.label).toBeTruthy();
+  expect(tBody.calendar_url).toMatch(/^https?:\/\//);
+
+  // Traduce: el admin puede apagarlo desde el panel de reclutadoras
+  // (active=False en hr_recruiter_companies). Aceptamos AMBOS escenarios:
+  //   - 200 con label/calendar_url cuando hay recruiters habilitados
+  //   - 503 'no_active_recruiters' cuando el admin lo apagó
+  // Ambos son comportamientos VÁLIDOS del sistema.
+  const trad = await req.post(`${API}/api/hr/recruiters/assign`, { data: { company: 'traduce' } });
+  if (trad.ok()) {
+    const body = await trad.json();
     expect(body.label).toBeTruthy();
     expect(body.calendar_url).toMatch(/^https?:\/\//);
+  } else {
+    expect(trad.status()).toBe(503);
+    const body = await trad.json();
+    expect(body.error).toBe('no_active_recruiters');
   }
 });
