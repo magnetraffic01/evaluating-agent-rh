@@ -124,7 +124,7 @@ function buildAnswers(state: EvaluationState): Record<string, unknown> {
 
 // ─── API pública ──────────────────────────────────────────────────────────────
 
-// Bug fix: pendingCreate evita race POST→POST. Si syncToSupabase se llama 2
+// Bug fix: pendingCreate evita race POST→POST. Si syncToBackend se llama 2
 // veces antes de que el primer POST resuelva, ambas verían existingId=null y
 // emitirían 2 POSTs, generando ER_DUP_ENTRY. Encolamos el segundo hasta que
 // el primero resuelva con el id.
@@ -162,7 +162,7 @@ async function ensureCreated(state: EvaluationState): Promise<string | null> {
  * Anonymous: TRUE para PATCH del candidato — evita mandar JWT admin si
  * está cacheado en mismo browser y disparar un redirect a /admin/login.
  */
-export async function syncToSupabase(state: EvaluationState): Promise<void> {
+export async function syncToBackend(state: EvaluationState): Promise<void> {
   try {
     const id = await ensureCreated(state);
     if (!id) return;
@@ -179,7 +179,7 @@ export async function syncToSupabase(state: EvaluationState): Promise<void> {
  * Guarda el estado final al completar o descartar la evaluación.
  * Retorna `error` para que la UI pueda mostrar un toast si algo falla.
  */
-export async function completeInSupabase(state: EvaluationState): Promise<{ error: string | null }> {
+export async function completeInBackend(state: EvaluationState): Promise<{ error: string | null }> {
   try {
     const id = await ensureCreated(state);
     if (!id) return { error: null };

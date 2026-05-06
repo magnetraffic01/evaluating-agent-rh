@@ -17,7 +17,7 @@ import {
   scorePhilosophy, philosophyPenalty,
   scoreStability, scoreRampUp, calculateTotalScore, calculateFinalStatus,
 } from '@/utils/scoring';
-import { syncToSupabase, completeInSupabase } from '@/hooks/useSession';
+import { syncToBackend, completeInBackend } from '@/hooks/useSession';
 import { sendWebhook } from '@/lib/webhook';
 import { assignRecruiter } from '@/lib/recruiters';
 import { useStepTracking } from '@/hooks/useStepTracking';
@@ -102,7 +102,7 @@ export default function Evaluate() {
           if (elapsed < SESSION_TIMEOUT_MS && parsed.status === 'en_progreso') {
             setState(parsed);
             setShowWelcome(false);
-            syncToSupabase(parsed);
+            syncToBackend(parsed);
             return;
           } else if (elapsed >= SESSION_TIMEOUT_MS && parsed.status === 'en_progreso') {
             navigate('/expired');
@@ -138,7 +138,7 @@ export default function Evaluate() {
       if (resolvedCompany === 'trebolife' || resolvedCompany === 'traduce') {
         setShowWelcome(false);
       }
-      syncToSupabase(initial);
+      syncToBackend(initial);
     })();
 
     return () => { cancelled = true; };
@@ -171,7 +171,7 @@ export default function Evaluate() {
     saveLocal(updated);
     saveCompleted(updated);
 
-    const { error } = await completeInSupabase(updated);
+    const { error } = await completeInBackend(updated);
     if (error) {
       toast.error('Error al guardar. Continuando de todas formas...', {
         action: { label: 'OK', onClick: () => {} },
@@ -328,7 +328,7 @@ export default function Evaluate() {
         // Notificar a GoHighLevel (fire and forget — no bloquea el flujo)
         sendWebhook(updated);
 
-        const { error } = await completeInSupabase(updated);
+        const { error } = await completeInBackend(updated);
         if (error && import.meta.env.DEV) {
           console.warn('[Supabase] Error al guardar evaluación completa:', error);
         }
@@ -351,7 +351,7 @@ export default function Evaluate() {
     saveLocal(updated);
 
     // Sync con Supabase en background (no bloquea la UI)
-    syncToSupabase(updated);
+    syncToBackend(updated);
 
     // Liberar el lock solo después de que el state quedó actualizado.
     handlerLockRef.current = false;

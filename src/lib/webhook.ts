@@ -2,11 +2,12 @@ import { EvaluationState } from '@/types/evaluation';
 
 const WEBHOOK_URL = import.meta.env.VITE_GHL_WEBHOOK_URL;
 
-// Fix 2026-05-06: el URL `presentacion-closer` daba 404 en GHL.
-// Default ahora apunta al calendar `entrevista-para-closer` que sí existe.
-const CALENDAR_ELITE = import.meta.env.VITE_CALENDAR_ELITE
-  || 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
-const CALENDAR_STD   = import.meta.env.VITE_CALENDAR_STD
+// Único calendar default si no hay reclutadora asignada (caso raro).
+// Mantiene VITE_CALENDAR_ELITE / VITE_CALENDAR_STD como aliases deprecados
+// para no romper envs ya configurados en producción.
+const CALENDAR_DEFAULT = import.meta.env.VITE_CALENDAR_DEFAULT
+  || import.meta.env.VITE_CALENDAR_ELITE
+  || import.meta.env.VITE_CALENDAR_STD
   || 'https://link.magnetraffic.com/widget/bookings/entrevista-para-closer';
 
 export interface WebhookPayload {
@@ -25,8 +26,8 @@ export interface WebhookPayload {
 
 function buildPayload(state: EvaluationState): WebhookPayload {
   let calendar_link: string | null = null;
-  if (state.status === 'elite')      calendar_link = CALENDAR_ELITE;
-  if (state.status === 'calificado') calendar_link = CALENDAR_STD;
+  if (state.status === 'elite')      calendar_link = CALENDAR_DEFAULT;
+  if (state.status === 'calificado') calendar_link = CALENDAR_DEFAULT;
 
   return {
     name:             state.name,
