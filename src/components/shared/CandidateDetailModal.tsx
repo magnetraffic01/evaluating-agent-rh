@@ -367,6 +367,25 @@ export default function CandidateDetailModal({
     return () => { cancelled = true; };
   }, [idForDetail]);
 
+  // Bug fix 2026-05-06: sincronizar state local de campos editables (dropdown,
+  // datepicker, notes, assigned_to, hired_status) cuando llega el detalle full.
+  // Si no hacemos esto, el dropdown muestra "Sin estado" mientras el header
+  // muestra "Reprogramado" porque el state local quedó con el valor inicial
+  // (vacío) antes que el detail llegara.
+  // Solo se sincroniza UNA VEZ post-fetch — después respetamos los cambios
+  // del usuario en la UI sin pisarlos con valores stale del backend.
+  const [hasSyncedDetail, setHasSyncedDetail] = useState(false);
+  useEffect(() => {
+    if (!detailLoading && !hasSyncedDetail) {
+      setInterviewStatus(candidate.interview_status || '');
+      setInterviewDate(candidate.interview_date ? candidate.interview_date.slice(0, 16) : '');
+      setRecruiterNotes(candidate.recruiter_notes || '');
+      setAssignedTo(candidate.assigned_to || '');
+      setHiredStatus((candidate.hired_status as HiredStatus) ?? null);
+      setHasSyncedDetail(true);
+    }
+  }, [detailLoading, candidate, hasSyncedDetail]);
+
   // Briefing — sembrado con lo que ya trae el detalle.
   const {
     briefing,
