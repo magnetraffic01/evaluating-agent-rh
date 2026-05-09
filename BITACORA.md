@@ -173,3 +173,99 @@ Elite outbound, re-engagement endpoint para n8n).
 - Backend: `agarces-stack/magnetraffic-hr` @ `04a063e`
 - Frontend: `agarces-stack/magnetraffic-hr-evaluator` @ `ff237ab`
 
+---
+
+## 2026-05-06 / 2026-05-08 · Sesión 8 — Auditoría operacional GHL calendar downstream + capacity fix
+
+> **Nota:** sesión operacional sobre infraestructura GHL, no FASE de desarrollo. No se tocó código del repo. La constante `CALENDAR_LINKS.CALIFICADO` (`https://link.magnetraffic.com/widget/bookings/entrevista-para-closer`) en `src/constants/links.ts` se validó intacta.
+
+**Objetivo:** atacar los issues abiertos en el wiki (`magnetraffic-hr-evaluator.md` sección "Issues detectados") sobre el calendar GHL al que la app envía a los candidatos calificados. Sub-account afectado: `MAGNETRAFFIC RRHH` (`zlIg4LBlQo6cBrlDQyUN`).
+
+### Hallazgos
+
+#### Issue #1 — Drift de URL del calendar custom alias → FALSO POSITIVO ^[verified]
+
+Riesgo declarado: ¿la URL hardcoded en `src/constants/links.ts` apunta al calendar viejo (borrado) o al nuevo?
+
+Verificación dual:
+
+- **API GHL:** en RRHH solo existe el calendar `vtUBwLlsQTJNqplZe0rU` con `widgetSlug=entrevista-para-closer`. En el sub-account MagneTraffic principal (8 calendars listados) ningún slug coincide. Calendar viejo `Wzb64Z8SC8kYfuDTBJzE` retorna HTTP 400 (ya borrado).
+- **Playwright sobre la URL pública:** el HTML cargado contiene el calendarId `vtUBwLlsQTJNqplZe0rU`, título "PRESENTACION CLOSER NEW" y horarios consistentes. Cloudflare bot challenge bloquea curl simple — irrelevante, el dominio resuelve OK a infra GHL.
+
+Screenshot: `Downloads/ghl_audit/widget_alias_2026-05-06.png`. **La constante en `src/constants/links.ts` no necesita cambio.**
+
+#### Issue #2 — Capacidad de registro insuficiente → FIX APLICADO ^[verified]
+
+Síntoma reportado: "el calendar solo deja registrar pocas personas, debería permitir ≥100/día". Diagnóstico vía `/free-slots` next-14-days:
+
+| Métrica | ANTES | INTERMEDIO (06) | FINAL (08) |
+|---|---|---|---|
+| Slots/día | 2 (11am, 3pm ET) | 3 (11am, 1pm, 3pm) | 2 (11am, 3pm) |
+| `allowBookingAfter` | 24h (mata same-day) | **2h** | **2h** |
+| `appoinmentPerSlot` | 1000 | 1000 | 1000 |
+| `appoinmentPerDay` | 2000 | 3000 | 3000 (cap, real efectivo = 2K) |
+| Slots libres próx 14d | 18 | 29 | 20 |
+
+**Iteración intermedia 2026-05-06:** se sumó ventana 13–14 ET (3 ventanas/día). **Revert 2026-05-08:** Amed decidió mantener solo 11am y 3pm. El revert deja `allowBookingAfter` en 2h y `appoinmentPerDay` en 3000 (cap inútil pero inocuo).
+
+Backups: `Downloads/ghl_audit/cal_new_pre_2026-05-06.json`, `cal_pre_revert_1pm.json`.
+
+#### Issue #5 — eventType `RoundRobin_OptimizeForAvailability` con 1 team member → DESCARTADO con evidencia ^[inferred]
+
+Hipótesis inicial: aunque `appoinmentPerSlot=1000`, RR podría capar al saturar a Juliana (host único). Evidencia empírica débil — al subir slots de 2→3/día y revertir limpio, GHL respetó los cambios sin "saturación oculta". Recomendación: monitorear 48–72h antes de tocar.
+
+#### Issue #3 — Juliana Castrillón duplicada en RRHH → PENDIENTE
+
+Dos usuarias con mismo nombre y mismo teléfono en sub-account RRHH:
+
+| | J1 (Manager@finanzaparalatinos.com) | J2 (juliana.manager@magnetraffic.com) |
+|---|---|---|
+| ID | `Y9EtBQmL6yxo6z3aS8xw` | `sGTCBmTw4S5jwadIOR6l` |
+| Role | admin | user |
+| Contactos asignados | 98 | 0 |
+| Appointments próx 30d | 5 | 0 |
+| Calendar host | sí | no |
+
+J2 es ghost dentro de RRHH (también activa en otros 5 sub-accounts). Verificado que **no aparece referenciada en ningún workflow** de RRHH (5 workflows revisados, incluyendo "Asignar Reclutador").
+
+Intento de remoción API: PIT no tiene scope `users/team-management.write` — DELETE y PUT retornan 401. Amed intentó remoción manual desde panel pero el `roles.locationIds` quedó intacto (verificado con monitor de polling 30s × 6 attempts → siempre `YES en RRHH`). La acción manual fue otra que la esperada. Pendiente segundo intento con instrucciones de UI más explícitas, o ruta Playwright con login interactivo.
+
+### Lección crítica registrada
+
+**GHL Calendar PUT es REPLACE, no PATCH.** Un PUT minimal con `{"allowBookingAfter": 2}` retornó HTTP 200 pero borró silenciosamente `openHours` (5 días → 0) y reseteó `slotDuration` (60 → 30). Restore desde backup requirió iterar removiendo campos rechazados (HTTP 422 sobre `formSubmitRedirectUrl`, presente en GET pero rechazado en PUT). Patrón seguro: GET → backup → modificar body completo → drop iterativo en 422 → PUT → GET + diff verificación.
+
+Documentado en:
+- Wiki: `MT-Wiki/concepts/ghl-api-put-replace-semantics.md` (nuevo)
+- Memoria: `feedback_ghl_calendar_put_replace.md`
+
+### Cambios de config aplicados a `vtUBwLlsQTJNqplZe0rU`
+
+```
+allowBookingAfter:   24h    →  2h
+openHours:           sin cambio neto (sumé 13–14 el 06, revertí el 08)
+appoinmentPerDay:    2000   →  3000   (cap, no se revertió)
+appoinmentPerSlot:   1000   →  1000   (sin cambio)
+eventType:           sin cambio
+slotDuration:        sin cambio
+isActive:            sin cambio
+```
+
+### Archivos modificados en este repo
+
+Solo `BITACORA.md` — la sesión no tocó código.
+
+### Pendientes (heredados al wiki)
+
+- [ ] **Juliana zombie** — segundo intento de remoción manual con path canónico, o ruta Playwright
+- [ ] **n8n workflows** — auditar workflows MagneTraffic por hardcode del `calendarId` viejo `Wzb64Z8SC8kYfuDTBJzE`
+- [ ] **eventType monitoring** — 48–72h con datos de bookings reales antes de decidir si tocar RR
+
+### Referencias
+
+- Wiki proyecto: `MT-Wiki/projects/magnetraffic-hr-evaluator.md`
+- Wiki concepts: `MT-Wiki/concepts/ghl-api-put-replace-semantics.md` (nuevo)
+- Wiki skill: `MT-Wiki/skills/ghl-class-booking-mass-interviews.md`
+- Memoria: `feedback_ghl_calendar_put_replace.md`
+- Backups operativos: `Downloads/ghl_audit/cal_new_pre_2026-05-06.json`, `cal_pre_revert_1pm.json`, `widget_alias_2026-05-06.png`
+- PIT GHL RRHH: `APPI Y CLAVE/01-Claves-y-APIs/GHL-Sub-Accounts/GHL - MagneTraffic RRHH.md`
+
